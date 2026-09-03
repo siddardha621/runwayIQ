@@ -89,28 +89,24 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
 
   return (
     <div className="card-hero p-6 sm:p-8 mb-6 relative overflow-hidden rounded-3xl">
-      
-      {/* Decorative ambient background glow */}
-      <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
       {/* Header with Title & Quick Presets */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-5 border-b border-white/10 relative z-10">
         <div>
-          <h2 className="text-lg font-black text-slate-100 flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-sm">
+          <h2 className="text-lg font-black text-white flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-sm">
               🎯
             </span>
             <span>Can I Safely Spend Money Today?</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
+          <p className="text-xs text-zinc-400 mt-1 font-medium">
             Test any planned business expense before you pay. The AI checks upcoming supplier bills and warns you before your cash runs low.
           </p>
         </div>
 
         {/* Amount Quick Presets */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] text-slate-400 font-semibold mr-1">Quick Picks:</span>
+          <span className="text-[11px] text-zinc-400 font-semibold mr-1">Quick Picks:</span>
           {[50000, 100000, 200000, 350000].map((preset) => (
             <button
               key={preset}
@@ -121,8 +117,8 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
               }}
               className={`px-3 py-1.5 text-xs rounded-xl font-bold transition-all shadow-sm ${
                 amount === preset
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/20 ring-1 ring-white/20'
-                  : 'bg-slate-900/90 border border-white/10 text-slate-300 hover:border-blue-500/40 hover:text-white'
+                  ? 'bg-emerald-600 text-white shadow-emerald-950/40 ring-1 ring-white/20'
+                  : 'bg-zinc-900 border border-white/10 text-zinc-300 hover:border-emerald-500/40 hover:text-white'
               }`}
             >
               {preset === 200000 ? '₹2 Lakh (Demo)' : `₹${preset / 1000}k`}
@@ -134,11 +130,11 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
       {/* Input Form with Premium Styling */}
       <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 relative z-10">
         <div>
-          <label className="block text-xs font-bold text-slate-200 mb-1.5 uppercase tracking-wider">
+          <label className="block text-xs font-bold text-zinc-200 mb-1.5 uppercase tracking-wider">
             Proposed Spend Amount
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-blue-400 font-black text-base">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-emerald-400 font-black text-base">
               ₹
             </span>
             <input
@@ -148,19 +144,19 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
               value={amount}
               onChange={(e) => setAmount(Number(e.target.value))}
               required
-              className="w-full pl-8 pr-4 py-2.5 bg-slate-950/80 text-white text-base rounded-xl border border-white/15 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-black tracking-tight"
+              className="w-full pl-8 pr-4 py-2.5 bg-black/50 text-white text-base rounded-xl border border-white/15 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 font-black tracking-tight"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-200 mb-1.5 uppercase tracking-wider">
+          <label className="block text-xs font-bold text-zinc-200 mb-1.5 uppercase tracking-wider">
             What is this expense for?
           </label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3.5 py-2.5 bg-slate-950/80 text-white text-sm rounded-xl border border-white/15 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-semibold"
+            className="w-full px-3.5 py-2.5 bg-black/50 text-white text-sm rounded-xl border border-white/15 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 font-semibold"
           >
             <option value="INVENTORY">Inventory / Product Stock Restock</option>
             <option value="SUPPLIER">Supplier Payable / Raw Materials</option>
@@ -174,7 +170,7 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2 ring-1 ring-white/20"
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-emerald-950/40 transition-all disabled:opacity-50 flex items-center justify-center gap-2 ring-1 ring-white/20"
           >
             <span>Run Safety Check</span>
             <ArrowRight className="w-4 h-4" />

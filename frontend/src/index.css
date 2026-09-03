@@ -7,11 +7,12 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
+/* Pure Luxury Obsidian Charcoal Background (Zero Blue) */
 body {
   margin: 0;
-  background: radial-gradient(circle at 50% 0%, #0d1527 0%, #070a14 50%, #04060c 100%);
+  background: radial-gradient(circle at 50% 0%, #1c1c22 0%, #121216 45%, #0a0a0c 100%);
   background-attachment: fixed;
-  color: #f8fafc;
+  color: #f4f4f5;
   font-family: var(--font-sans);
   overflow-x: hidden;
 }
@@ -22,115 +23,102 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #070a14;
+  background: #0d0d10;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #27272a;
   border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #3f3f46;
 }
 
-/* Base Fintech Card */
+/* Base Fintech Card - Neutral Matte Charcoal */
 .fintech-card {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 15, 30, 0.9) 100%);
+  background: linear-gradient(180deg, rgba(26, 26, 32, 0.85) 0%, rgba(18, 18, 23, 0.95) 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 12px 32px -6px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(20px);
   border-radius: 1.25rem;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fintech-glass {
-  background: rgba(11, 17, 34, 0.85);
+  background: rgba(20, 20, 26, 0.88);
   backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
 }
 
-/* Distinct Classic Metric Card Gradients */
+/* Distinct Classic Metric Card Gradients (Warm & Vibrant Accents on Charcoal) */
 .card-emerald {
-  background: linear-gradient(145deg, rgba(6, 44, 30, 0.6) 0%, rgba(9, 20, 28, 0.9) 100%);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  box-shadow: 0 10px 30px -5px rgba(6, 44, 30, 0.3), inset 0 1px 0 0 rgba(52, 211, 153, 0.2);
+  background: linear-gradient(145deg, rgba(6, 44, 30, 0.55) 0%, rgba(18, 22, 20, 0.95) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(52, 211, 153, 0.25);
 }
 .card-emerald:hover {
-  border-color: rgba(52, 211, 153, 0.5);
-  box-shadow: 0 14px 35px -5px rgba(16, 185, 129, 0.4);
+  border-color: rgba(52, 211, 153, 0.6);
+  box-shadow: 0 14px 35px -5px rgba(16, 185, 129, 0.3);
 }
 
 .card-amber {
-  background: linear-gradient(145deg, rgba(55, 33, 8, 0.6) 0%, rgba(18, 16, 26, 0.9) 100%);
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  box-shadow: 0 10px 30px -5px rgba(55, 33, 8, 0.3), inset 0 1px 0 0 rgba(251, 191, 36, 0.2);
+  background: linear-gradient(145deg, rgba(55, 33, 8, 0.55) 0%, rgba(24, 20, 18, 0.95) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(251, 191, 36, 0.25);
 }
 .card-amber:hover {
-  border-color: rgba(251, 191, 36, 0.5);
-  box-shadow: 0 14px 35px -5px rgba(245, 158, 11, 0.4);
+  border-color: rgba(251, 191, 36, 0.6);
+  box-shadow: 0 14px 35px -5px rgba(245, 158, 11, 0.3);
 }
 
 .card-cyan {
-  background: linear-gradient(145deg, rgba(10, 37, 60, 0.6) 0%, rgba(10, 16, 30, 0.9) 100%);
-  border: 1px solid rgba(14, 165, 233, 0.25);
-  box-shadow: 0 10px 30px -5px rgba(10, 37, 60, 0.3), inset 0 1px 0 0 rgba(56, 189, 248, 0.2);
+  background: linear-gradient(145deg, rgba(14, 38, 48, 0.55) 0%, rgba(18, 22, 26, 0.95) 100%);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(45, 212, 191, 0.25);
 }
 .card-cyan:hover {
-  border-color: rgba(56, 189, 248, 0.5);
-  box-shadow: 0 14px 35px -5px rgba(14, 165, 233, 0.4);
+  border-color: rgba(45, 212, 191, 0.6);
+  box-shadow: 0 14px 35px -5px rgba(20, 184, 166, 0.3);
 }
 
 .card-rose {
-  background: linear-gradient(145deg, rgba(58, 15, 29, 0.6) 0%, rgba(20, 12, 24, 0.9) 100%);
-  border: 1px solid rgba(244, 63, 94, 0.25);
-  box-shadow: 0 10px 30px -5px rgba(58, 15, 29, 0.3), inset 0 1px 0 0 rgba(251, 113, 133, 0.2);
+  background: linear-gradient(145deg, rgba(58, 15, 29, 0.55) 0%, rgba(26, 18, 22, 0.95) 100%);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(251, 113, 133, 0.25);
 }
 .card-rose:hover {
-  border-color: rgba(251, 113, 133, 0.5);
-  box-shadow: 0 14px 35px -5px rgba(244, 63, 94, 0.4);
+  border-color: rgba(251, 113, 133, 0.6);
+  box-shadow: 0 14px 35px -5px rgba(244, 63, 94, 0.3);
 }
 
-/* Decision Center Hero Card */
+/* Decision Center Hero Card - Charcoal Graphite with subtle platinum bezel */
 .card-hero {
-  background: linear-gradient(160deg, rgba(17, 26, 52, 0.85) 0%, rgba(12, 18, 38, 0.95) 50%, rgba(9, 13, 26, 0.98) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(129, 140, 248, 0.2);
+  background: linear-gradient(165deg, rgba(28, 28, 35, 0.95) 0%, rgba(20, 20, 25, 0.98) 60%, rgba(14, 14, 18, 1) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Status Glow Effects */
 .glow-safe {
-  background: linear-gradient(135deg, rgba(6, 78, 59, 0.8) 0%, rgba(4, 47, 46, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.85) 0%, rgba(4, 47, 46, 0.95) 100%);
   border: 1px solid rgba(52, 211, 153, 0.6);
   box-shadow: 0 0 35px -5px rgba(16, 185, 129, 0.35), inset 0 1px 0 0 rgba(167, 243, 208, 0.3);
 }
 
 .glow-caution {
-  background: linear-gradient(135deg, rgba(120, 53, 15, 0.8) 0%, rgba(69, 26, 3, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.85) 0%, rgba(69, 26, 3, 0.95) 100%);
   border: 1px solid rgba(251, 191, 36, 0.6);
   box-shadow: 0 0 35px -5px rgba(245, 158, 11, 0.35), inset 0 1px 0 0 rgba(254, 240, 138, 0.3);
 }
 
 .glow-risk {
-  background: linear-gradient(135deg, rgba(136, 19, 55, 0.8) 0%, rgba(76, 5, 25, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(136, 19, 55, 0.85) 0%, rgba(76, 5, 25, 0.95) 100%);
   border: 1px solid rgba(244, 63, 94, 0.6);
   box-shadow: 0 0 35px -5px rgba(225, 29, 72, 0.4), inset 0 1px 0 0 rgba(254, 205, 211, 0.3);
 }
 
 .glow-abstain {
-  background: linear-gradient(135deg, rgba(55, 48, 163, 0.8) 0%, rgba(30, 27, 75, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(55, 48, 163, 0.85) 0%, rgba(30, 27, 75, 0.95) 100%);
   border: 1px solid rgba(167, 139, 250, 0.6);
   box-shadow: 0 0 35px -5px rgba(139, 92, 246, 0.35), inset 0 1px 0 0 rgba(233, 213, 255, 0.3);
-}
-
-/* Gradient Texts */
-.text-gradient-blue {
-  background: linear-gradient(135deg, #60a5fa 0%, #38bdf8 50%, #818cf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.text-gradient-gold {
-  background: linear-gradient(135deg, #fde047 0%, #eab308 50%, #ca8a04 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
 }

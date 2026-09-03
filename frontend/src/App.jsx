@@ -157,7 +157,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-[#0b0b0e] text-zinc-100 flex flex-col justify-between">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 flex-1">
         
         {/* Header with 3 Simple Navigation Tabs & Store Selector */}
