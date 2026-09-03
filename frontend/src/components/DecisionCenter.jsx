@@ -88,10 +88,11 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
   };
 
   return (
-    <div className="fintech-card p-6 sm:p-7 mb-6 relative overflow-hidden">
+    <div className="card-hero p-6 sm:p-8 mb-6 relative overflow-hidden rounded-3xl">
       
       {/* Decorative ambient background glow */}
-      <div className="absolute -top-24 -right-24 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute -top-24 -right-24 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
       {/* Header with Title & Quick Presets */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-5 border-b border-white/10 relative z-10">

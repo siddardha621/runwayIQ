@@ -96,72 +96,68 @@ export default function KpiRibbon({ summary, onOpenDataQuality }) {
       {/* 4 Premium Metric Cards with Colored Glass Accents */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
-        {/* 1. Cash in Bank Today */}
-        <div className="fintech-card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400"></div>
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+        {/* 1. Cash in Bank Today (Classic Emerald) */}
+        <div className="card-emerald p-5 rounded-2xl relative overflow-hidden group">
+          <div className="flex items-center justify-between text-emerald-300 text-xs font-bold mb-2 tracking-wide">
             <span>AVAILABLE CASH TODAY</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 group-hover:scale-110 transition shadow">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-slate-100 tracking-tight my-1">
+          <div className="text-2xl sm:text-3xl font-black text-white tracking-tight my-1">
             {formatINR(summary.current_cash)}
           </div>
-          <p className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 mt-1.5">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <p className="text-[11px] text-emerald-300 font-semibold flex items-center gap-1.5 mt-1.5">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
             Realized & cleared in bank account
           </p>
         </div>
 
-        {/* 2. Safety Reserve (Buffer) */}
-        <div className="fintech-card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-yellow-400"></div>
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+        {/* 2. Safety Reserve / Buffer (Classic Amber Gold) */}
+        <div className="card-amber p-5 rounded-2xl relative overflow-hidden group">
+          <div className="flex items-center justify-between text-amber-300 text-xs font-bold mb-2 tracking-wide">
             <span>SAFETY RESERVE (BUFFER)</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 group-hover:scale-110 transition shadow">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-300 tracking-tight my-1">
+          <div className="text-2xl sm:text-3xl font-black text-amber-200 tracking-tight my-1">
             {formatINR(summary.minimum_operating_cash)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1.5">
-            Reserved for payroll, taxes & fixed bills
+          <p className="text-[11px] text-amber-300/80 mt-1.5 font-medium">
+            Locked for payroll, taxes & vendor dues
           </p>
         </div>
 
-        {/* 3. Expected Money In */}
-        <div className="fintech-card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400"></div>
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+        {/* 3. Expected In (Classic Cyan Sapphire) */}
+        <div className="card-cyan p-5 rounded-2xl relative overflow-hidden group">
+          <div className="flex items-center justify-between text-sky-300 text-xs font-bold mb-2 tracking-wide">
             <span>EXPECTED IN (NEXT 30D)</span>
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition">
+            <div className="w-8 h-8 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-300 group-hover:scale-110 transition shadow">
               <ArrowDownLeft className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-cyan-300 tracking-tight my-1">
+          <div className="text-2xl sm:text-3xl font-black text-sky-100 tracking-tight my-1">
             {formatINR(summary.expected_inflows_30d)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1.5">
+          <p className="text-[11px] text-sky-300/80 mt-1.5 font-medium">
             From projected customer settlements
           </p>
         </div>
 
-        {/* 4. Upcoming Bills & Expenses */}
-        <div className="fintech-card p-5 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-pink-500"></div>
-          <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+        {/* 4. Upcoming Bills (Classic Ruby Crimson) */}
+        <div className="card-rose p-5 rounded-2xl relative overflow-hidden group">
+          <div className="flex items-center justify-between text-rose-300 text-xs font-bold mb-2 tracking-wide">
             <span>UPCOMING BILLS & PAYABLES</span>
-            <div className="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition">
+            <div className="w-8 h-8 rounded-xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-rose-300 group-hover:scale-110 transition shadow">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-rose-300 tracking-tight my-1">
+          <div className="text-2xl sm:text-3xl font-black text-rose-200 tracking-tight my-1">
             {formatINR(summary.pending_obligations_total || summary.expected_outflows_30d)}
           </div>
-          <p className="text-[11px] text-slate-400 mt-1.5">
-            Supplier payables & operational costs
+          <p className="text-[11px] text-rose-300/80 mt-1.5 font-medium">
+            Supplier payables & operational dues
           </p>
         </div>
 
