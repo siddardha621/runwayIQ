@@ -1,0 +1,140 @@
+from typing import List
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from backend.models.database import get_db
+from backend.models.merchant import Merchant
+from backend.models.obligation import Obligation
+from backend.services.cashflow_service import CashflowService
+from backend.services.forecast_service import ForecastService
+from backend.services.anomaly_service import AnomalyService
+from backend.api.schemas import (
+    MerchantResponse,
+    MerchantSummaryResponse,
+    DataQualityResponse,
+    ObligationResponse,
+)
+from backend.core.constants import RiskLevel
+
+router = APIRouter(prefix="/merchants", tags=["Merchants"])
+
+
+@router.get("", response_model=List[MerchantResponse])
+def list_merchants(db: Session = Depends(get_db)):
+    """List all registered merchants across different behavior archetypes."""
+    merchants = db.query(Merchant).all()
+    return merchants
+
+
+@router.get("/{merchant_id}", response_model=MerchantResponse)
+def get_merchant(merchant_id: str, db: Session = Depends(get_db)):
+    """Get single merchant details by ID."""
+    merchant = db.query(Merchant).filter(Merchant.merchant_id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail=f"Merchant {merchant_id} not found.")
+    return merchant
+
+
+@router.get("/{merchant_id}/summary", response_model=MerchantSummaryResponse)
+def get_merchant_summary(merchant_id: str, db: Session = Depends(get_db)):
+    """
+    Returns executive KPI cards:
+    Current cash, expected inflows/outflows, dynamic operating buffer,
+    projected minimum cash point, overall risk level, confidence, and data quality.
+    """
+    merchant = db.query(Merchant).filter(Merchant.merchant_id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail=f"Merchant {merchant_id} not found.")
+
+    ref_date = date(2026, 9, 2)
+    ledger = CashflowService.get_merchant_ledger(db, merchant_id, as_of_date=ref_date)
+    current_cash = ledger["current_balance"]
+
+    # Forecast and Dynamic Buffer
+    forecast = ForecastService.generate_forecast(db, merchant_id, horizon_days=30, as_of_date=ref_date)
+    buffer = forecast["dynamic_buffer_details"]["effective_buffer"]
+    projected_min = forecast["projected_min_cash"]
+    projected_date = forecast["projected_min_cash_date"]
+    confidence = forecast["confidence"]
+
+    # Sum 30-day expected inflows and outflows
+    exp_inflows = sum(p["predicted_inflow"] for p in forecast["points"])
+    exp_outflows = sum(p["predicted_outflow"] for p in forecast["points"])
+
+    # Anomalies
+    anomaly_data = AnomalyService.get_merchant_anomalies(db, merchant_id, as_of_date=ref_date)
+    anom_count = len(anomaly_data["anomalies"])
+
+    # Data Quality
+    dq = CashflowService.calculate_data_quality_score(db, merchant_id, as_of_date=ref_date)
+
+    # Obligations
+    ob_total = db.query(func.sum(Obligation.amount)).filter(
+        Obligation.merchant_id == merchant_id,
+        Obligation.due_date >= ref_date,
+        Obligation.status == "UPCOMING"
+    ).scalar() or 0.0
+
+    # Risk level classification for current baseline state
+    if dq["history_days"] < 14:
+        risk_level = RiskLevel.MODERATE  # Insufficient history
+    elif projected_min < 0:
+        risk_level = RiskLevel.CRITICAL
+    elif projected_min < buffer:
+        risk_level = RiskLevel.HIGH
+    elif projected_min < (buffer * 1.20) or anom_count > 0:
+        risk_level = RiskLevel.MODERATE
+    else:
+        risk_level = RiskLevel.LOW
+
+    return {
+        "merchant_id": merchant.merchant_id,
+        "business_name": merchant.business_name,
+        "business_type": merchant.business_type,
+        "current_cash": current_cash,
+        "expected_inflows_30d": round(exp_inflows, 2),
+        "expected_outflows_30d": round(exp_outflows, 2),
+        "minimum_operating_cash": buffer,
+        "projected_min_cash": projected_min,
+        "projected_min_cash_date": projected_date,
+        "risk_level": risk_level,
+        "forecast_confidence": confidence,
+        "data_quality_score": dq["overall_score"],
+        "active_anomalies_count": anom_count,
+        "pending_obligations_total": round(ob_total, 2),
+    }
+
+
+@router.get("/{merchant_id}/data-quality", response_model=DataQualityResponse)
+def get_data_quality(merchant_id: str, db: Session = Depends(get_db)):
+    """Returns data quality breakdown and factors (history depth, completeness, reconciliation)."""
+    return CashflowService.calculate_data_quality_score(db, merchant_id)
+
+
+@router.get("/{merchant_id}/obligations", response_model=List[ObligationResponse])
+def get_obligations(merchant_id: str, db: Session = Depends(get_db)):
+    """Returns upcoming obligations sorted by due date with risk contribution weight."""
+    ref_date = date(2026, 9, 2)
+    obs = db.query(Obligation).filter(
+        Obligation.merchant_id == merchant_id,
+        Obligation.due_date >= ref_date,
+        Obligation.status == "UPCOMING"
+    ).order_by(Obligation.due_date.asc()).all()
+
+    total_amt = sum(o.amount for o in obs) or 1.0
+
+    result = []
+    for o in obs:
+        risk_contrib = round((o.amount / total_amt) * 100, 1)
+        result.append({
+            "obligation_id": o.obligation_id,
+            "due_date": o.due_date,
+            "amount": o.amount,
+            "category": o.category,
+            "priority": o.priority,
+            "status": o.status,
+            "recurring": o.recurring,
+            "risk_contribution_pct": risk_contrib,
+        })
+    return result
