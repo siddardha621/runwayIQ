@@ -83,3 +83,17 @@ export async function fetchModelEvaluation() {
   if (!res.ok) throw new Error('Failed to fetch evaluations');
   return res.json();
 }
+
+export async function uploadStatement(merchantId, file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${BASE_URL}/merchants/${merchantId}/upload-statement`, {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to upload statement');
+  }
+  return res.json();
+}

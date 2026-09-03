@@ -108,3 +108,17 @@ def test_models_evaluation_endpoint():
     data = response.json()
     assert "benchmarks" in data
     assert len(data["benchmarks"]) == 4
+
+
+def test_upload_merchant_statement_csv():
+    csv_content = b"Date,Description,Amount,Type\n2026-08-25,Test Inflow,50000.0,INFLOW\n2026-08-26,Test Outflow,15000.0,OUTFLOW\n"
+    response = client.post(
+        "/api/v1/merchants/merch_urbancart/upload-statement",
+        files={"file": ("statement.csv", csv_content, "text/csv")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["rows_processed"] == 2
+    assert data["inflows_added"] == 1
+    assert data["outflows_added"] == 1

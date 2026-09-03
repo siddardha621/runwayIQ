@@ -7,7 +7,8 @@ import {
   CheckCircle2, 
   LineChart, 
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  UploadCloud
 } from 'lucide-react';
 
 export default function Header({ 
@@ -17,7 +18,8 @@ export default function Header({
   onRefresh, 
   loading,
   activeTab,
-  onSelectTab
+  onSelectTab,
+  onOpenUpload
 }) {
   const tabs = [
     { id: 'decision', label: 'Safety Decision Check', icon: <CheckCircle2 className="w-4 h-4" /> },
@@ -104,6 +106,15 @@ export default function Header({
               <ChevronDown className="w-4 h-4" />
             </div>
           </div>
+
+          <button
+            onClick={onOpenUpload}
+            className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 rounded-xl text-xs font-bold border border-blue-500/40 hover:border-blue-500/60 transition shadow-sm"
+            title="Import Bank or Settlement CSV Statement"
+          >
+            <UploadCloud className="w-3.5 h-3.5 text-blue-400" />
+            <span>Upload Statement</span>
+          </button>
 
           <button
             onClick={onRefresh}

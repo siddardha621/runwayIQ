@@ -8,6 +8,7 @@ import ScenarioSimulator from './components/ScenarioSimulator';
 import DecisionCenter from './components/DecisionCenter';
 import CopilotChat from './components/CopilotChat';
 import DataQualityModal from './components/DataQualityModal';
+import UploadStatementModal from './components/UploadStatementModal';
 import {
   fetchMerchants,
   fetchMerchantSummary,
@@ -34,6 +35,7 @@ export default function App() {
   const [decisionResult, setDecisionResult] = useState(null);
   const [dataQuality, setDataQuality] = useState(null);
   const [isDqModalOpen, setIsDqModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -167,6 +169,7 @@ export default function App() {
           loading={loading}
           activeTab={activeTab}
           onSelectTab={setActiveTab}
+          onOpenUpload={() => setIsUploadModalOpen(true)}
         />
 
         {/* Error Alert Banner */}
@@ -247,6 +250,16 @@ export default function App() {
         isOpen={isDqModalOpen}
         onClose={() => setIsDqModalOpen(false)}
         dataQuality={dataQuality}
+      />
+
+      {/* Upload Statement Modal */}
+      <UploadStatementModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        merchantId={selectedMerchantId}
+        onUploadSuccess={() => {
+          loadMerchantData(selectedMerchantId);
+        }}
       />
 
       {/* Footer */}
