@@ -30,7 +30,7 @@ class CashflowService:
         if not merchant:
             raise MerchantNotFoundError(f"Merchant {merchant_id} not found.")
 
-        ref_date = as_of_date or date(2026, 9, 2)
+        ref_date = as_of_date or max(date.today(), date(2026, 9, 2))
         start_date = merchant.created_at.date()
 
         # Aggregate realized settlements by settlement_date

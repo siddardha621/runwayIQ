@@ -1,5 +1,5 @@
 import pytest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from backend.models.database import Base
@@ -26,12 +26,13 @@ def db_session():
             starting_balance=100000.0,
             minimum_operating_cash=50000.0,
             settlement_cycle="T+2",
+            created_at=datetime(2026, 9, 1, 10, 0, 0),
         )
         db.add(m)
         db.commit()
 
         # Day 1: Settlement +20,000, Expense -5,000 -> Net +15,000 -> End: 115,000
-        d1 = m.created_at.date()
+        d1 = date(2026, 9, 1)
         s1 = Settlement(
             settlement_id="s1",
             merchant_id="test_m1",
