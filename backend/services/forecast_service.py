@@ -30,10 +30,9 @@ class ForecastService:
         if not merchant:
             raise MerchantNotFoundError(f"Merchant {merchant_id} not found.")
 
-        ref_date = as_of_date or date(2026, 9, 2)
-
         # 1. Historical Cash Ledger
-        ledger_data = CashflowService.get_merchant_ledger(db, merchant_id, as_of_date=ref_date)
+        ledger_data = CashflowService.get_merchant_ledger(db, merchant_id, as_of_date=as_of_date)
+        ref_date = as_of_date or ledger_data["as_of_date"]
         history_df = CashflowFeatureEngineer.ledger_to_dataframe(ledger_data["entries"])
 
         # 2. Upcoming Obligations

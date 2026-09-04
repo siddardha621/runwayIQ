@@ -30,8 +30,24 @@ class CashflowService:
         if not merchant:
             raise MerchantNotFoundError(f"Merchant {merchant_id} not found.")
 
-        ref_date = as_of_date or max(date.today(), date(2026, 9, 2))
-        start_date = merchant.created_at.date()
+        # Determine latest reference date and start date dynamically
+        max_settle = db.query(func.max(Settlement.settlement_date)).filter(Settlement.merchant_id == merchant_id).scalar()
+        max_exp = db.query(func.max(Expense.date)).filter(Expense.merchant_id == merchant_id).scalar()
+        latest_d = max(date.today(), date(2026, 9, 2))
+        if max_settle and max_settle > latest_d:
+            latest_d = max_settle
+        if max_exp and max_exp > latest_d:
+            latest_d = max_exp
+        ref_date = as_of_date or latest_d
+
+        min_settle = db.query(func.min(Settlement.settlement_date)).filter(Settlement.merchant_id == merchant_id).scalar()
+        min_exp = db.query(func.min(Expense.date)).filter(Expense.merchant_id == merchant_id).scalar()
+        calc_start = merchant.created_at.date()
+        if min_settle and min_settle < calc_start:
+            calc_start = min_settle
+        if min_exp and min_exp < calc_start:
+            calc_start = min_exp
+        start_date = calc_start
 
         # Aggregate realized settlements by settlement_date
         settlements = (

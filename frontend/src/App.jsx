@@ -9,6 +9,7 @@ import DecisionCenter from './components/DecisionCenter';
 import CopilotChat from './components/CopilotChat';
 import DataQualityModal from './components/DataQualityModal';
 import UploadStatementModal from './components/UploadStatementModal';
+import StatementHistory from './components/StatementHistory';
 import LoginPage from './components/LoginPage';
 import {
   fetchMerchants,
@@ -21,6 +22,7 @@ import {
   evaluateDecision,
   queryCopilot,
   fetchDataQuality,
+  fetchStatementHistory,
 } from './services/api';
 
 export default function App() {
@@ -29,12 +31,13 @@ export default function App() {
 
   const [merchants, setMerchants] = useState([]);
   const [selectedMerchantId, setSelectedMerchantId] = useState('merch_urbancart');
-  const [activeTab, setActiveTab] = useState('decision'); // 'decision', 'overview', 'simulator'
+  const [activeTab, setActiveTab] = useState('decision'); // 'decision', 'statement', 'overview', 'simulator'
   const [summary, setSummary] = useState(null);
   const [cashflow, setCashflow] = useState(null);
   const [forecast, setForecast] = useState(null);
   const [anomalies, setAnomalies] = useState(null);
   const [obligations, setObligations] = useState([]);
+  const [statementData, setStatementData] = useState(null);
   const [scenarioResult, setScenarioResult] = useState(null);
   const [decisionResult, setDecisionResult] = useState(null);
   const [dataQuality, setDataQuality] = useState(null);
@@ -69,13 +72,14 @@ export default function App() {
     setScenarioResult(null);
     setDecisionResult(null);
     try {
-      const [sumData, cfData, fcData, anomData, obData, dqData] = await Promise.all([
+      const [sumData, cfData, fcData, anomData, obData, dqData, stmtData] = await Promise.all([
         fetchMerchantSummary(merchantId),
         fetchCashflow(merchantId),
         fetchForecast(merchantId, 30),
         fetchAnomalies(merchantId),
         fetchObligations(merchantId),
         fetchDataQuality(merchantId),
+        fetchStatementHistory(merchantId),
       ]);
 
       setSummary(sumData);
@@ -84,6 +88,7 @@ export default function App() {
       setAnomalies(anomData);
       setObligations(obData);
       setDataQuality(dqData);
+      setStatementData(stmtData);
 
       // Pre-evaluate default ₹2,00,000 commitment for UrbanCart demo
       if (merchantId === 'merch_urbancart') {
@@ -183,7 +188,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-5 flex-1">
         
-        {/* Header with 3 Simple Navigation Tabs, Store Selector & User Profile */}
+        {/* Header with Navigation Tabs, Store Selector & User Profile */}
         <Header
           merchants={merchants}
           selectedMerchantId={selectedMerchantId}
@@ -199,8 +204,8 @@ export default function App() {
 
         {/* Error Alert Banner */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium">
-            <strong>Connection Notice:</strong> {error}
+          <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">
+            <span>{error}</span>
           </div>
         )}
 
@@ -227,7 +232,16 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 2: CASH FLOW & BILLS (Visual Trends & Schedule) */}
+        {/* TAB 2: STATEMENT & TRANSACTIONS HISTORY */}
+        {activeTab === 'statement' && (
+          <StatementHistory
+            statementData={statementData}
+            onOpenUpload={() => setIsUploadModalOpen(true)}
+            loading={loading}
+          />
+        )}
+
+        {/* TAB 3: CASH FLOW & BILLS (Visual Trends & Schedule) */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
             <ForecastChart
@@ -243,7 +257,7 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3: WHAT-IF SIMULATOR & AI COPILOT */}
+        {/* TAB 4: WHAT-IF SIMULATOR & AI COPILOT */}
         {activeTab === 'simulator' && (
           <div className="space-y-6">
             <ForecastChart
@@ -270,7 +284,7 @@ export default function App() {
 
       </div>
 
-      {/* Data Quality Transparency Modal */}
+      {/* Modals */}
       <DataQualityModal
         isOpen={isDqModalOpen}
         onClose={() => setIsDqModalOpen(false)}
@@ -284,6 +298,7 @@ export default function App() {
         merchantId={selectedMerchantId}
         onUploadSuccess={() => {
           loadMerchantData(selectedMerchantId);
+          setActiveTab('statement');
         }}
       />
 

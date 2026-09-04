@@ -47,9 +47,9 @@ def get_merchant_summary(merchant_id: str, db: Session = Depends(get_db)):
     if not merchant:
         raise HTTPException(status_code=404, detail=f"Merchant {merchant_id} not found.")
 
-    ref_date = date(2026, 9, 2)
-    ledger = CashflowService.get_merchant_ledger(db, merchant_id, as_of_date=ref_date)
+    ledger = CashflowService.get_merchant_ledger(db, merchant_id)
     current_cash = ledger["current_balance"]
+    ref_date = ledger["as_of_date"]
 
     # Forecast and Dynamic Buffer
     forecast = ForecastService.generate_forecast(db, merchant_id, horizon_days=30, as_of_date=ref_date)

@@ -10,7 +10,8 @@ import {
   ShieldCheck, 
   UploadCloud,
   LogOut,
-  User
+  User,
+  Landmark
 } from 'lucide-react';
 
 export default function Header({ 
@@ -27,6 +28,7 @@ export default function Header({
 }) {
   const tabs = [
     { id: 'decision', label: 'Safety Decision Check', icon: <CheckCircle2 className="w-4.5 h-4.5" /> },
+    { id: 'statement', label: 'Bank Statement & Ledger', icon: <Landmark className="w-4.5 h-4.5" /> },
     { id: 'overview', label: 'Cash Runway & Bills', icon: <LineChart className="w-4.5 h-4.5" /> },
     { id: 'simulator', label: 'What-If & AI Copilot', icon: <Sparkles className="w-4.5 h-4.5" /> },
   ];

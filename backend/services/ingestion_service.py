@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from backend.models.merchant import Merchant
 from backend.models.settlement import Settlement
 from backend.models.expense import Expense
+from backend.models.transaction import Transaction
+from backend.models.refund import Refund
 from backend.core.exceptions import MerchantNotFoundError
 
 
@@ -198,6 +200,7 @@ class IngestionService:
         file_contents: bytes,
         filename: str = "statement.csv",
         manual_balance: Optional[float] = None,
+        replace_mode: bool = False,
     ) -> Dict[str, Any]:
         """
         Dispatches statement parsing based on file extension (.csv, .xlsx, .pdf, .txt),
@@ -398,6 +401,14 @@ class IngestionService:
             raise ValueError("No transaction entries or bank balance could be extracted from this file. Please verify file format or enter the closing balance.")
 
         # Process Extracted Rows into Database
+        if replace_mode:
+            # Clean old records so account reflects exact uploaded statement
+            db.query(Refund).filter(Refund.merchant_id == merchant_id).delete()
+            db.query(Settlement).filter(Settlement.merchant_id == merchant_id).delete()
+            db.query(Expense).filter(Expense.merchant_id == merchant_id).delete()
+            db.query(Transaction).filter(Transaction.merchant_id == merchant_id).delete()
+            db.commit()
+
         rows_processed = 0
         inflows_added = 0
         outflows_added = 0
@@ -448,9 +459,23 @@ class IngestionService:
                     status="SETTLED",
                 )
                 db.add(settle)
+
+                tx = Transaction(
+                    transaction_id=f"tx_imp_{uuid.uuid4().hex[:12]}",
+                    merchant_id=merchant_id,
+                    timestamp=datetime.combine(row_date, datetime.min.time()),
+                    amount=credit_amt,
+                    payment_method="BANK_TRANSFER" if any(x in desc.lower() for x in ("neft", "rtgs", "imps", "bank")) else ("UPI" if "upi" in desc.lower() else "NETBANKING"),
+                    status="SUCCESS",
+                    customer_segment="RETAIL",
+                    geography="DOMESTIC",
+                    order_value=credit_amt,
+                )
+                db.add(tx)
+
                 inflows_added += 1
                 total_inflow_amt += credit_amt
-                if len(preview_rows) < 5:
+                if len(preview_rows) < 8:
                     preview_rows.append({
                         "date": str(row_date),
                         "description": desc,
@@ -465,7 +490,7 @@ class IngestionService:
                     expense_id=f"exp_imp_{uuid.uuid4().hex[:10]}",
                     merchant_id=merchant_id,
                     date=row_date,
-                    category="SUPPLIER" if "supp" in str(desc).lower() else "OTHER",
+                    category=desc if desc else "SUPPLIER",
                     amount=debit_amt,
                     recurring=False,
                     priority="HIGH",
@@ -473,7 +498,7 @@ class IngestionService:
                 db.add(exp)
                 outflows_added += 1
                 total_outflow_amt += debit_amt
-                if len(preview_rows) < 5:
+                if len(preview_rows) < 8:
                     preview_rows.append({
                         "date": str(row_date),
                         "description": desc,
@@ -488,15 +513,23 @@ class IngestionService:
         # Synchronize merchant bank cash balance to the verified closing balance
         new_cash = old_cash
         if final_balance is not None and final_balance > 0:
-            current_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
-            delta = final_balance - current_ledger["current_balance"]
-            merchant.starting_balance = round(float(merchant.starting_balance) + delta, 2)
-            db.commit()
-            reconciled_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
-            new_cash = reconciled_ledger["current_balance"]
+            if replace_mode:
+                net_flow = total_inflow_amt - total_outflow_amt
+                merchant.starting_balance = round(final_balance - net_flow, 2)
+                db.commit()
+                reconciled_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
+                new_cash = reconciled_ledger["current_balance"]
+            else:
+                current_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
+                delta = final_balance - current_ledger["current_balance"]
+                merchant.starting_balance = round(float(merchant.starting_balance) + delta, 2)
+                db.commit()
+                reconciled_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
+                new_cash = reconciled_ledger["current_balance"]
         else:
             current_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
             new_cash = current_ledger["current_balance"]
+
 
         balance_msg = f" Bank closing balance synchronized to ₹{new_cash:,.2f}." if final_balance else ""
 

@@ -38,7 +38,8 @@ class DecisionEngineService:
         if not merchant:
             raise MerchantNotFoundError(f"Merchant {merchant_id} not found.")
 
-        ref_date = as_of_date or date(2026, 9, 2)
+        ledger = CashflowService.get_merchant_ledger(db, merchant_id, as_of_date=as_of_date)
+        ref_date = as_of_date or ledger["as_of_date"]
         commit_date = request.commitment_date or (ref_date + timedelta(days=1))
         amount = float(request.amount)
 

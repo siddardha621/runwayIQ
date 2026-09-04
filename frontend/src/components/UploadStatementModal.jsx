@@ -6,6 +6,7 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
   const [file, setFile] = useState(null);
   const [customBalance, setCustomBalance] = useState('');
   const [autoDetected, setAutoDetected] = useState(false);
+  const [replaceMode, setReplaceMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -79,7 +80,7 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
 
     try {
       const balanceToSync = customBalance ? parseFloat(customBalance) : null;
-      const res = await uploadStatement(merchantId, file, balanceToSync);
+      const res = await uploadStatement(merchantId, file, balanceToSync, replaceMode);
       setResult(res);
       if (onUploadSuccess) {
         onUploadSuccess();
@@ -239,6 +240,60 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
               <p className="text-[11px] text-slate-500 mt-1 font-medium">
                 Closing balance extracted from your statement will synchronize your store's live bank cash ledger.
               </p>
+            </div>
+
+            {/* Sync Mode Selector */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Statement Ingestion Mode
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div
+                  onClick={() => setReplaceMode(true)}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                    replaceMode
+                      ? 'bg-blue-50/80 border-blue-500 ring-1 ring-blue-500/20 text-blue-900'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="importMode"
+                    checked={replaceMode}
+                    onChange={() => setReplaceMode(true)}
+                    className="mt-0.5 text-blue-600 cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-bold block text-slate-900">Replace & Sync (Recommended)</span>
+                    <span className="text-[11px] text-slate-500 block leading-tight mt-0.5">
+                      Clears demo records. Dashboard ledger will match this exact statement.
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setReplaceMode(false)}
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition ${
+                    !replaceMode
+                      ? 'bg-blue-50/80 border-blue-500 ring-1 ring-blue-500/20 text-blue-900'
+                      : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="importMode"
+                    checked={!replaceMode}
+                    onChange={() => setReplaceMode(false)}
+                    className="mt-0.5 text-blue-600 cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-bold block text-slate-900">Append to History</span>
+                    <span className="text-[11px] text-slate-500 block leading-tight mt-0.5">
+                      Adds rows to existing ledger and updates closing balance.
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {error && (

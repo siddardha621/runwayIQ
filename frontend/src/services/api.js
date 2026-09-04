@@ -84,11 +84,20 @@ export async function fetchModelEvaluation() {
   return res.json();
 }
 
-export async function uploadStatement(merchantId, file, closingBalance = null) {
+export async function fetchStatementHistory(merchantId, limit = 250) {
+  const res = await fetch(`${BASE_URL}/merchants/${merchantId}/statement-history?limit=${limit}`);
+  if (!res.ok) throw new Error('Failed to fetch statement history');
+  return res.json();
+}
+
+export async function uploadStatement(merchantId, file, closingBalance = null, replaceMode = false) {
   const formData = new FormData();
   formData.append('file', file);
   if (closingBalance !== null && closingBalance !== undefined && closingBalance !== '') {
     formData.append('closing_balance', String(closingBalance));
+  }
+  if (replaceMode) {
+    formData.append('replace_mode', 'true');
   }
   const res = await fetch(`${BASE_URL}/merchants/${merchantId}/upload-statement`, {
     method: 'POST',

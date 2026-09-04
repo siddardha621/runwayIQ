@@ -110,10 +110,34 @@ def test_models_evaluation_endpoint():
     assert len(data["benchmarks"]) == 4
 
 
+def _get_test_merchant():
+    from backend.models.database import SessionLocal
+    from backend.models.merchant import Merchant
+    import datetime
+    db = SessionLocal()
+    m = db.query(Merchant).filter(Merchant.merchant_id == "merch_test_isolated").first()
+    if not m:
+        m = Merchant(
+            merchant_id="merch_test_isolated",
+            business_name="Test Store Isolated",
+            business_type="D2C",
+            created_at=datetime.datetime(2026, 6, 1),
+            starting_balance=500000.0,
+            minimum_operating_cash=100000.0,
+            settlement_cycle="T+2",
+            currency="INR",
+        )
+        db.add(m)
+        db.commit()
+    db.close()
+    return "merch_test_isolated"
+
+
 def test_upload_merchant_statement_csv():
+    m_id = _get_test_merchant()
     csv_content = b"Date,Description,Amount,Type\n2026-08-25,Test Inflow,50000.0,INFLOW\n2026-08-26,Test Outflow,15000.0,OUTFLOW\n"
     response = client.post(
-        "/api/v1/merchants/merch_urbancart/upload-statement",
+        f"/api/v1/merchants/{m_id}/upload-statement",
         files={"file": ("statement.csv", csv_content, "text/csv")},
     )
     assert response.status_code == 200
@@ -125,6 +149,7 @@ def test_upload_merchant_statement_csv():
 
 
 def test_upload_statement_with_balance_sync():
+    m_id = _get_test_merchant()
     csv_with_balance = (
         b"Date,Description,Credit,Debit,Balance\n"
         b"2026-08-28,Opening Balance,0.0,0.0,850000.00\n"
@@ -132,7 +157,7 @@ def test_upload_statement_with_balance_sync():
         b"2026-08-30,Client Settlement,120000.00,0.0,950000.00\n"
     )
     response = client.post(
-        "/api/v1/merchants/merch_urbancart/upload-statement",
+        f"/api/v1/merchants/{m_id}/upload-statement",
         files={"file": ("hdfc_statement.csv", csv_with_balance, "text/csv")},
     )
     assert response.status_code == 200
@@ -143,6 +168,7 @@ def test_upload_statement_with_balance_sync():
 
 
 def test_upload_excel_statement():
+    m_id = _get_test_merchant()
     import io
     import openpyxl
 
@@ -158,7 +184,7 @@ def test_upload_excel_statement():
     excel_bytes = buf.getvalue()
 
     response = client.post(
-        "/api/v1/merchants/merch_urbancart/upload-statement",
+        f"/api/v1/merchants/{m_id}/upload-statement",
         files={"file": ("statement.xlsx", excel_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
     )
     assert response.status_code == 200
@@ -171,13 +197,14 @@ def test_upload_excel_statement():
 
 
 def test_upload_statement_with_hdfc_bank_format():
+    m_id = _get_test_merchant()
     statement = (
         b"Txn Date,Particulars,Withdrawal Amt.,Deposit Amt.,Closing Balance (INR)\n"
         b"28-Aug-2026,UPI-SETTLEMENT-PAYOUT,0.0,95000.00,980000.00\n"
         b"29-Aug-2026,SUPPLIER RAW MATERIALS,42000.00,0.0,938000.00\n"
     )
     response = client.post(
-        "/api/v1/merchants/merch_urbancart/upload-statement",
+        f"/api/v1/merchants/{m_id}/upload-statement",
         files={"file": ("hdfc_aug_statement.csv", statement, "text/csv")},
     )
     assert response.status_code == 200
@@ -192,9 +219,10 @@ def test_upload_statement_with_hdfc_bank_format():
 
 
 def test_upload_statement_with_manual_balance_override():
+    m_id = _get_test_merchant()
     csv_data = b"Date,Description,Amount,Type\n2026-08-30,Retail Inflow,30000.0,INFLOW\n"
     response = client.post(
-        "/api/v1/merchants/merch_urbancart/upload-statement",
+        f"/api/v1/merchants/{m_id}/upload-statement",
         files={"file": ("inflow_only.csv", csv_data, "text/csv")},
         data={"closing_balance": "1050000.00"},
     )
@@ -203,4 +231,16 @@ def test_upload_statement_with_manual_balance_override():
     assert data["success"] is True
     assert data["closing_balance_extracted"] == 1050000.0
     assert data["new_cash"] == 1050000.0
+
+
+def test_get_merchant_statement_history():
+    m_id = _get_test_merchant()
+    response = client.get(f"/api/v1/merchants/{m_id}/statement-history")
+    assert response.status_code == 200
+    data = response.json()
+    assert "entries" in data
+    assert "current_balance" in data
+    assert "total_credits" in data
+    assert "total_debits" in data
+
 
