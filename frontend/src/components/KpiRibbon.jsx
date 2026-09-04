@@ -93,70 +93,70 @@ export default function KpiRibbon({ summary, onOpenDataQuality }) {
         </div>
       </div>
 
-      {/* 4 Clean Metric Cards */}
+      {/* 4 Clean Metric Cards with Tasteful Classic Soft Pastel Tints */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         
-        {/* 1. Cash in Bank Today */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
+        {/* 1. Cash in Bank Today (Soft Classic Mint) */}
+        <div className="card-emerald p-5 rounded-2xl flex flex-col justify-between transition group">
+          <div className="flex items-center justify-between text-emerald-800 text-xs font-bold mb-2 tracking-wide">
             <span>AVAILABLE CASH TODAY</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700 shadow-2xs">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight my-1">
             {formatINR(summary.current_cash)}
           </div>
-          <p className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1.5 mt-1">
+          <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5 mt-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             Realized & cleared in bank account
           </p>
         </div>
 
-        {/* 2. Safety Reserve (Buffer) */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
+        {/* 2. Safety Reserve / Buffer (Soft Classic Warm Amber) */}
+        <div className="card-amber p-5 rounded-2xl flex flex-col justify-between transition group">
+          <div className="flex items-center justify-between text-amber-800 text-xs font-bold mb-2 tracking-wide">
             <span>SAFETY RESERVE (BUFFER)</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-700 shadow-2xs">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight my-1">
             {formatINR(summary.minimum_operating_cash)}
           </div>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">
+          <p className="text-[11px] text-amber-800/90 font-medium mt-1">
             Locked for payroll, taxes & fixed bills
           </p>
         </div>
 
-        {/* 3. Expected Money In */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
+        {/* 3. Expected Money In (Soft Classic Sky Blue) */}
+        <div className="card-cyan p-5 rounded-2xl flex flex-col justify-between transition group">
+          <div className="flex items-center justify-between text-sky-800 text-xs font-bold mb-2 tracking-wide">
             <span>EXPECTED IN (NEXT 30D)</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+            <div className="w-8 h-8 rounded-xl bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-700 shadow-2xs">
               <ArrowDownLeft className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight my-1">
             {formatINR(summary.expected_inflows_30d)}
           </div>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">
+          <p className="text-[11px] text-sky-800/90 font-medium mt-1">
             From projected customer settlements
           </p>
         </div>
 
-        {/* 4. Upcoming Bills & Expenses */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold mb-2">
+        {/* 4. Upcoming Bills & Expenses (Soft Classic Rose Coral) */}
+        <div className="card-rose p-5 rounded-2xl flex flex-col justify-between transition group">
+          <div className="flex items-center justify-between text-rose-800 text-xs font-bold mb-2 tracking-wide">
             <span>UPCOMING BILLS & PAYABLES</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+            <div className="w-8 h-8 rounded-xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shadow-2xs">
               <ArrowUpRight className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight my-1">
             {formatINR(summary.pending_obligations_total || summary.expected_outflows_30d)}
           </div>
-          <p className="text-[11px] text-slate-500 font-medium mt-1">
+          <p className="text-[11px] text-rose-800/90 font-medium mt-1">
             Mandatory supplier & tax payables
           </p>
         </div>

@@ -7,10 +7,11 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* Professional Enterprise Light Theme (Stripe / Razorpay / Mercury inspired) */
+/* Subtle, Classic Light Ambient Background */
 body {
   margin: 0;
-  background-color: #f8fafc;
+  background: radial-gradient(circle at 50% 0%, #f1f5f9 0%, #f8fafc 55%, #edf2f7 100%);
+  background-attachment: fixed;
   color: #0f172a;
   font-family: var(--font-sans);
   overflow-x: hidden;
@@ -33,59 +34,76 @@ body {
   background: #94a3b8;
 }
 
-/* Clean Enterprise Cards */
+/* Base Enterprise Card */
 .fintech-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1.125rem;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.04), 0 1px 3px -1px rgba(0, 0, 0, 0.02);
   transition: all 0.2s ease-in-out;
 }
 
 .fintech-card:hover {
   border-color: #cbd5e1;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.07);
 }
 
 .fintech-glass {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(16px);
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Distinct Metric Cards - Professional Pastel Accents */
+/* Tasteful, Classic Soft Pastel Card Tints (Just the right amount of classic color) */
 .card-emerald {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid #10b981;
+  background: linear-gradient(140deg, #ecfdf5 0%, #ffffff 50%, #f0fdf4 100%);
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 4px 16px -3px rgba(16, 185, 129, 0.12);
+}
+.card-emerald:hover {
+  border-color: #6ee7b7;
+  box-shadow: 0 8px 22px -3px rgba(16, 185, 129, 0.18);
 }
 
 .card-amber {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid #f59e0b;
+  background: linear-gradient(140deg, #fffbeb 0%, #ffffff 50%, #fef3c7 100%);
+  border: 1px solid #fde68a;
+  box-shadow: 0 4px 16px -3px rgba(245, 158, 11, 0.12);
+}
+.card-amber:hover {
+  border-color: #fcd34d;
+  box-shadow: 0 8px 22px -3px rgba(245, 158, 11, 0.18);
 }
 
 .card-cyan {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid #0284c7;
+  background: linear-gradient(140deg, #f0f9ff 0%, #ffffff 50%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  box-shadow: 0 4px 16px -3px rgba(2, 132, 199, 0.12);
+}
+.card-cyan:hover {
+  border-color: #7dd3fc;
+  box-shadow: 0 8px 22px -3px rgba(2, 132, 199, 0.18);
 }
 
 .card-rose {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-left: 4px solid #e11d48;
+  background: linear-gradient(140deg, #fff1f2 0%, #ffffff 50%, #ffe4e6 100%);
+  border: 1px solid #fecdd3;
+  box-shadow: 0 4px 16px -3px rgba(225, 29, 72, 0.12);
+}
+.card-rose:hover {
+  border-color: #fda4af;
+  box-shadow: 0 8px 22px -3px rgba(225, 29, 72, 0.18);
 }
 
+/* Decision Center Hero Card - Subtle Pearl & Lavender-Blue Tint */
 .card-hero {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 55%, #eef2ff 100%);
+  border: 1px solid #e0e7ff;
+  box-shadow: 0 8px 25px -4px rgba(79, 70, 229, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
 }
 
-/* Professional Audit Verdict Cards */
+/* Verdict Banners */
 .glow-safe {
   background: #ecfdf5;
   border: 1px solid #a7f3d0;

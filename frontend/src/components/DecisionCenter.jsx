@@ -83,7 +83,7 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
   };
 
   return (
-    <div className="bg-white p-6 sm:p-7 mb-6 rounded-xl border border-slate-200 shadow-sm">
+    <div className="card-hero p-6 sm:p-7 mb-6 rounded-2xl">
       
       {/* Header with Title & Quick Presets */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-5 border-b border-slate-100">
@@ -165,7 +165,7 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-sm transition disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-500/20 transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>Run Safety Check</span>
             <ArrowRight className="w-4 h-4" />
