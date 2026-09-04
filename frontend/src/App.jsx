@@ -263,9 +263,9 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
-        <p className="font-medium text-slate-600">Razorpay Merchant Cash-Flow Decision Intelligence System</p>
-        <p className="mt-0.5 text-[11px] text-slate-400">
+      <footer className="border-t border-slate-200 bg-white py-5 text-center text-sm text-slate-500">
+        <p className="font-semibold text-slate-700">Razorpay Merchant Cash-Flow Decision Intelligence System</p>
+        <p className="mt-1 text-xs text-slate-500 font-medium">
           Enterprise Working Capital & Risk Optimization • Zero Hallucination Guarantee
         </p>
       </footer>

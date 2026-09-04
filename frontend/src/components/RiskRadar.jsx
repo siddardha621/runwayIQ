@@ -32,27 +32,27 @@ export default function RiskRadar({ anomaliesData }) {
   ];
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col justify-between">
+    <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-sm h-full flex flex-col justify-between">
       <div>
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <ShieldAlert className="w-5 h-5 text-amber-600" />
-            <h3 className="text-base font-bold text-slate-900">Store Health Signals & Risk Factors</h3>
+        <div className="flex items-center justify-between mb-5 pb-3.5 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <ShieldAlert className="w-6 h-6 text-amber-600" />
+            <h3 className="text-lg font-bold text-slate-900">Store Health Signals & Risk Factors</h3>
           </div>
-          <span className="text-xs text-slate-500 font-semibold">Live Monitor</span>
+          <span className="text-xs sm:text-sm text-slate-500 font-semibold">Live Monitor</span>
         </div>
 
         {/* Health Signals */}
-        <div className="space-y-3 mb-6">
+        <div className="space-y-3.5 mb-7">
           {signals.map((sig) => {
             const status = getStatusBadge(sig.score);
             return (
-              <div key={sig.label} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+              <div key={sig.label} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
                 <div>
-                  <span className="font-bold text-sm text-slate-900 block">{sig.label}</span>
-                  <span className="text-xs text-slate-600 font-medium">{sig.desc}</span>
+                  <span className="font-bold text-base text-slate-900 block">{sig.label}</span>
+                  <span className="text-sm text-slate-600 font-medium">{sig.desc}</span>
                 </div>
-                <span className={`px-3 py-1 text-xs font-bold rounded-lg border shadow-2xs ${status.bg}`}>
+                <span className={`px-3.5 py-1.5 text-xs sm:text-sm font-bold rounded-lg border shadow-2xs whitespace-nowrap ${status.bg}`}>
                   {status.text}
                 </span>
               </div>
@@ -63,31 +63,31 @@ export default function RiskRadar({ anomaliesData }) {
 
       {/* Detected Anomalies List */}
       <div>
-        <h4 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-blue-600" />
+        <h4 className="text-sm sm:text-base font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-blue-600" />
           Active Financial Alerts ({anomalies.length})
         </h4>
 
         {anomalies.length === 0 ? (
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-600 text-center font-medium">
+          <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600 text-center font-medium">
             All recent revenue and settlement patterns are operating within normal limits.
           </div>
         ) : (
-          <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
+          <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
             {anomalies.map((anom, idx) => (
               <div
                 key={idx}
-                className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm"
+                className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-sm"
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-slate-900">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-base text-slate-900">
                     {anom.type.replace('_', ' ')}
                   </span>
-                  <span className="px-2.5 py-0.5 text-xs font-bold rounded-md bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                  <span className="px-3 py-1 text-xs sm:text-sm font-bold rounded-md bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
                     {anom.severity}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-700 leading-snug font-medium">{anom.description}</p>
+                <p className="text-sm text-slate-700 leading-relaxed font-medium">{anom.description}</p>
               </div>
             ))}
           </div>
