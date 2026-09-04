@@ -20,20 +20,22 @@ import {
 } from 'lucide-react';
 
 export default function DecisionCenter({ onEvaluate, decisionResult, loading }) {
-  const [amount, setAmount] = useState(200000);
+  const [amount, setAmount] = useState(2000);
   const [category, setCategory] = useState('INVENTORY');
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const numericAmt = Number(amount);
+    if (!numericAmt || numericAmt <= 0) return;
     onEvaluate({
-      amount: Number(amount),
+      amount: numericAmt,
       category: category,
     });
   };
 
   const formatINR = (val) => {
-    if (val === undefined || val === null) return '₹0';
+    if (val === undefined || val === null || val === '') return '₹0';
     return '₹' + Number(val).toLocaleString('en-IN', { maximumFractionDigits: 0 });
   };
 
@@ -102,7 +104,7 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
         {/* Amount Quick Presets */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs sm:text-sm text-slate-600 font-semibold mr-1">Quick Picks:</span>
-          {[50000, 100000, 200000, 350000].map((preset) => (
+          {[2000, 10000, 50000, 100000, 200000].map((preset) => (
             <button
               key={preset}
               type="button"
@@ -111,12 +113,16 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
                 onEvaluate({ amount: preset, category });
               }}
               className={`px-3.5 py-2 text-xs sm:text-sm rounded-xl font-semibold transition border ${
-                amount === preset
+                Number(amount) === preset
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-transparent shadow-sm font-bold'
                   : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 shadow-2xs'
               }`}
             >
-              {preset === 200000 ? '₹2 Lakh (Demo)' : `₹${preset / 1000}k`}
+              {preset === 200000
+                ? '₹2 Lakh'
+                : preset >= 100000
+                ? `₹${preset / 100000} Lakh`
+                : `₹${preset.toLocaleString('en-IN')}`}
             </button>
           ))}
         </div>
@@ -134,14 +140,18 @@ export default function DecisionCenter({ onEvaluate, decisionResult, loading }) 
             </span>
             <input
               type="number"
-              min="1000"
-              step="5000"
+              min="1"
+              step="any"
               value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
+              onChange={(e) => setAmount(e.target.value)}
               required
+              placeholder="e.g. 2000"
               className="w-full pl-9 pr-4 py-3 bg-white text-slate-900 text-lg rounded-xl border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-extrabold tracking-tight shadow-sm"
             />
           </div>
+          <p className="text-[11px] text-slate-500 mt-1 font-medium">
+            Enter any spend amount (e.g. ₹500, ₹2,000, ₹50,000, ₹2,00,000+)
+          </p>
         </div>
 
         <div>
