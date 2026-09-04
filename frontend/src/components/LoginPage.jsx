@@ -82,7 +82,7 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
           </div>
           <div>
             <span className="text-lg font-bold text-slate-900 tracking-tight">
-              Razorpay <span className="text-blue-600 font-extrabold">CashFlow Intelligence</span>
+              RunwayIQ <span className="text-blue-600 font-extrabold">CashFlow Intelligence</span>
             </span>
             <span className="text-xs text-slate-500 block font-medium">
               RunwayIQ Enterprise Decision Engine
@@ -236,7 +236,7 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
 
             <div className="mt-8 pt-5 border-t border-slate-100 text-center">
               <span className="text-xs text-slate-500 font-medium block">
-                Razorpay Merchant Decision Intelligence
+                RunwayIQ Merchant Decision Intelligence
               </span>
               <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
                 Bangalore Working Capital & Risk Engineering
@@ -249,7 +249,7 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
 
       {/* Bottom Footer */}
       <div className="max-w-6xl mx-auto w-full text-center text-xs text-slate-500 font-medium">
-        <span>© 2026 Razorpay Software Private Limited • Autonomous Cash-Flow Copilot</span>
+        <span>© 2026 RunwayIQ Financial Technologies • Autonomous Cash-Flow Decision Engine</span>
       </div>
 
     </div>

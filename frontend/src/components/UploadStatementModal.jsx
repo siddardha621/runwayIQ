@@ -44,13 +44,13 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
 
   const handleDownloadSampleCsv = () => {
     const sampleCsv = `Date,Description,Credit,Debit,Balance
-2026-08-25,Razorpay Payout Batch #8921,85000.00,0.00,885000.00
+2026-08-25,Settlement Payout Batch #8921,85000.00,0.00,885000.00
 2026-08-26,Packaging Materials Supplier,0.00,18500.00,866500.00
-2026-08-27,Razorpay Payout Batch #8922,92000.00,0.00,958500.00
+2026-08-27,Settlement Payout Batch #8922,92000.00,0.00,958500.00
 2026-08-28,Social Media Marketing Ads,0.00,12000.00,946500.00
-2026-08-29,Razorpay Payout Batch #8923,104000.00,0.00,1050500.00
+2026-08-29,Settlement Payout Batch #8923,104000.00,0.00,1050500.00
 2026-08-30,Warehouse Lease Installment,0.00,25000.00,1025500.00
-2026-08-31,Razorpay Payout Batch #8924,96000.00,0.00,1121500.00
+2026-08-31,Settlement Payout Batch #8924,96000.00,0.00,1121500.00
 2026-09-01,Supplier Restock Delivery,0.00,45000.00,1076500.00
 `;
     const blob = new Blob([sampleCsv], { type: 'text/csv' });

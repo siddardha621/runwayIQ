@@ -44,7 +44,7 @@ export default function Header({
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-                  Razorpay <span className="text-blue-600 font-extrabold">CashFlow Intelligence</span>
+                  RunwayIQ <span className="text-blue-600 font-extrabold">CashFlow Intelligence</span>
                 </h1>
                 <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
