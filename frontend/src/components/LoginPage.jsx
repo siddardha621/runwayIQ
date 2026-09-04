@@ -216,12 +216,19 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                   </span>
                 </div>
 
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-medium">
+                  <span className="font-bold text-slate-800 block mb-0.5">Quick Demo Credentials:</span>
+                  <span>Email: <strong className="text-slate-900">admin@urbancart.in</strong></span>
+                  <span className="mx-1.5">•</span>
+                  <span>Password: <strong className="text-slate-900">admin123</strong></span>
+                </div>
+
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm sm:text-base rounded-xl shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <span>{loading ? 'Authenticating...' : 'Launch Decision Dashboard'}</span>
+                  <span>{loading ? 'Verifying Credentials...' : 'Sign In with Credentials'}</span>
                   <ArrowRight className="w-4.5 h-4.5" />
                 </button>
               </form>

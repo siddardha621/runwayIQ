@@ -24,25 +24,11 @@ import {
 } from './services/api';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('runwayiq_user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  // Login page always comes first on initial visit/load
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [merchants, setMerchants] = useState([]);
-  const [selectedMerchantId, setSelectedMerchantId] = useState(() => {
-    try {
-      const saved = localStorage.getItem('runwayiq_user');
-      const parsed = saved ? JSON.parse(saved) : null;
-      return parsed?.merchant_id || 'merch_urbancart';
-    } catch {
-      return 'merch_urbancart';
-    }
-  });
+  const [selectedMerchantId, setSelectedMerchantId] = useState('merch_urbancart');
   const [activeTab, setActiveTab] = useState('decision'); // 'decision', 'overview', 'simulator'
   const [summary, setSummary] = useState(null);
   const [cashflow, setCashflow] = useState(null);
