@@ -36,6 +36,27 @@ export async function fetchObligations(merchantId) {
   return res.json();
 }
 
+export async function createObligation(merchantId, data) {
+  const res = await fetch(`${BASE_URL}/merchants/${merchantId}/obligations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to create obligation');
+  }
+  return res.json();
+}
+
+export async function deleteObligation(merchantId, obligationId) {
+  const res = await fetch(`${BASE_URL}/merchants/${merchantId}/obligations/${obligationId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete obligation');
+  return res.json();
+}
+
 export async function fetchRecentTransactions(merchantId, limit = 20) {
   const res = await fetch(`${BASE_URL}/merchants/${merchantId}/transactions?limit=${limit}`);
   if (!res.ok) throw new Error('Failed to fetch transactions');

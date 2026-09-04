@@ -18,6 +18,8 @@ import {
   fetchForecast,
   fetchAnomalies,
   fetchObligations,
+  createObligation,
+  deleteObligation,
   simulateScenario,
   evaluateDecision,
   queryCopilot,
@@ -142,6 +144,32 @@ export default function App() {
     }
   };
 
+  // Handlers: Manage Scheduled Obligations (Bills, Salaries, Taxes)
+  const handleAddObligation = async (obData) => {
+    try {
+      setLoading(true);
+      await createObligation(selectedMerchantId, obData);
+      await loadMerchantData(selectedMerchantId);
+    } catch (err) {
+      console.error('Error adding obligation:', err);
+      alert(err.message || 'Failed to add bill');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteObligation = async (obId) => {
+    try {
+      setLoading(true);
+      await deleteObligation(selectedMerchantId, obId);
+      await loadMerchantData(selectedMerchantId);
+    } catch (err) {
+      console.error('Error deleting obligation:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handler: Query AI Copilot
   const handleAskCopilot = async (question) => {
     const userMsg = { role: 'user', text: question };
@@ -227,7 +255,11 @@ export default function App() {
             {/* Quick Context Strip */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <RiskRadar anomaliesData={anomalies} />
-              <ObligationsTable obligations={obligations} />
+              <ObligationsTable
+                obligations={obligations}
+                onAddObligation={handleAddObligation}
+                onDeleteObligation={handleDeleteObligation}
+              />
             </div>
           </div>
         )}
@@ -251,7 +283,11 @@ export default function App() {
             />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ObligationsTable obligations={obligations} />
+              <ObligationsTable
+                obligations={obligations}
+                onAddObligation={handleAddObligation}
+                onDeleteObligation={handleDeleteObligation}
+              />
               <RiskRadar anomaliesData={anomalies} />
             </div>
           </div>

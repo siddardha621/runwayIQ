@@ -320,4 +320,50 @@ def test_upload_phonepe_statement_not_extracting_platform_fee_as_balance():
     assert data["outflows_added"] == 1
 
 
+def test_create_and_delete_obligation_endpoint():
+    m_id = _get_test_merchant()
+    # 1. Create a new employee salary obligation
+    payload = {
+        "category": "PAYROLL",
+        "amount": 15000.0,
+        "due_date": "2026-09-15",
+        "priority": "MANDATORY",
+        "recurring": True,
+    }
+    create_res = client.post(f"/api/v1/merchants/{m_id}/obligations", json=payload)
+    assert create_res.status_code == 200
+    ob_data = create_res.json()
+    assert ob_data["amount"] == 15000.0
+    assert ob_data["category"] == "PAYROLL"
+    assert ob_data["status"] == "UPCOMING"
+    ob_id = ob_data["obligation_id"]
+
+    # 2. Check it appears in merchant's obligations list
+    get_res = client.get(f"/api/v1/merchants/{m_id}/obligations")
+    assert get_res.status_code == 200
+    obs = get_res.json()
+    assert any(o["obligation_id"] == ob_id for o in obs)
+
+    # 3. Delete the obligation
+    del_res = client.delete(f"/api/v1/merchants/{m_id}/obligations/{ob_id}")
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] == "SUCCESS"
+
+
+def test_new_merchant_has_starter_obligations():
+    import uuid
+    test_email = f"merchant_bills_{uuid.uuid4().hex[:6]}@gmail.com"
+    reg_resp = client.post("/api/v1/merchants/login-or-register", json={"email": test_email, "password": "Password123"})
+    assert reg_resp.status_code == 200
+    m_id = reg_resp.json()["merchant_id"]
+
+    # Verify newly registered store has starter scheduled obligations (e.g. TAX)
+    obs_resp = client.get(f"/api/v1/merchants/{m_id}/obligations")
+    assert obs_resp.status_code == 200
+    obs = obs_resp.json()
+    assert len(obs) >= 1
+    categories = [o["category"] for o in obs]
+    assert "TAX" in categories or "UTILITIES" in categories
+
+
 

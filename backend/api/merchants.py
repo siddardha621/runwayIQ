@@ -14,6 +14,7 @@ from backend.api.schemas import (
     MerchantSummaryResponse,
     DataQualityResponse,
     ObligationResponse,
+    CreateObligationRequest,
     LoginOrRegisterRequest,
     LoginResponse,
     ResetPasswordRequest,
@@ -143,6 +144,64 @@ def get_obligations(merchant_id: str, db: Session = Depends(get_db)):
     return result
 
 
+@router.post("/{merchant_id}/obligations", response_model=ObligationResponse)
+def create_obligation(merchant_id: str, request: CreateObligationRequest, db: Session = Depends(get_db)):
+    """Creates a new scheduled obligation (e.g. Payroll, Tax, Rent, Supplier invoice)."""
+    import uuid
+    from datetime import datetime
+    merchant = db.query(Merchant).filter(Merchant.merchant_id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail=f"Merchant {merchant_id} not found.")
+
+    valid_categories = ["PAYROLL", "TAX", "RENT", "SUPPLIER", "LOAN", "INVENTORY", "UTILITIES", "OTHER"]
+    cat = request.category.upper() if request.category.upper() in valid_categories else "OTHER"
+    
+    valid_priorities = ["MANDATORY", "HIGH", "MEDIUM", "DISCRETIONARY"]
+    prio = request.priority.upper() if request.priority.upper() in valid_priorities else "MANDATORY"
+
+    ob_id = f"ob_{merchant_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:4]}"
+    
+    new_ob = Obligation(
+        obligation_id=ob_id,
+        merchant_id=merchant_id,
+        due_date=request.due_date,
+        amount=round(float(request.amount), 2),
+        category=cat,
+        priority=prio,
+        recurring=request.recurring,
+        status="UPCOMING",
+    )
+    db.add(new_ob)
+    db.commit()
+    db.refresh(new_ob)
+
+    return {
+        "obligation_id": new_ob.obligation_id,
+        "due_date": new_ob.due_date,
+        "amount": new_ob.amount,
+        "category": new_ob.category,
+        "priority": new_ob.priority,
+        "status": new_ob.status,
+        "recurring": new_ob.recurring,
+        "risk_contribution_pct": 100.0,
+    }
+
+
+@router.delete("/{merchant_id}/obligations/{obligation_id}")
+def delete_obligation(merchant_id: str, obligation_id: str, db: Session = Depends(get_db)):
+    """Deletes or cancels a scheduled obligation."""
+    ob = db.query(Obligation).filter(
+        Obligation.merchant_id == merchant_id,
+        Obligation.obligation_id == obligation_id
+    ).first()
+    if not ob:
+        raise HTTPException(status_code=404, detail="Obligation not found.")
+
+    db.delete(ob)
+    db.commit()
+    return {"status": "SUCCESS", "message": f"Obligation {obligation_id} removed."}
+
+
 @router.post("/login-or-register", response_model=LoginResponse)
 def login_or_register_merchant(request: LoginOrRegisterRequest, db: Session = Depends(get_db)):
     """
@@ -198,6 +257,32 @@ def login_or_register_merchant(request: LoginOrRegisterRequest, db: Session = De
             currency="INR",
         )
         db.add(new_merchant)
+        db.commit()
+
+        # Seed starter scheduled bills for new store (e.g. GST tax and utility bill)
+        starter_obs = [
+            Obligation(
+                obligation_id=f"ob_{merchant_id}_tax",
+                merchant_id=merchant_id,
+                due_date=date(2026, 9, 20),
+                amount=500.0,
+                category="TAX",
+                priority="MANDATORY",
+                recurring=True,
+                status="UPCOMING",
+            ),
+            Obligation(
+                obligation_id=f"ob_{merchant_id}_util",
+                merchant_id=merchant_id,
+                due_date=date(2026, 9, 12),
+                amount=350.0,
+                category="UTILITIES",
+                priority="HIGH",
+                recurring=True,
+                status="UPCOMING",
+            ),
+        ]
+        db.bulk_save_objects(starter_obs)
         db.commit()
 
         new_auth = UserAuth(
