@@ -43,15 +43,20 @@ async def upload_merchant_statement(
     db: Session = Depends(get_db),
 ):
     """
-    Upload and parse an external bank or gateway CSV statement.
-    Automatically updates the merchant's cash ledger and safety buffer.
+    Upload and parse an external bank or gateway statement (PDF, Excel, CSV, TXT).
+    Automatically updates the merchant's cash ledger, synchronizes bank balance, and recalibrates buffers.
     """
-    if not file.filename.lower().endswith((".csv", ".txt")):
-        raise HTTPException(status_code=400, detail="Only CSV statement files are supported (.csv).")
+    allowed_extensions = (".csv", ".txt", ".xlsx", ".xls", ".pdf")
+    if not file.filename.lower().endswith(allowed_extensions):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported format. Please upload a statement in {', '.join(allowed_extensions)} format.",
+        )
 
     try:
         contents = await file.read()
-        result = IngestionService.ingest_statement_csv(db, merchant_id, contents)
+        result = IngestionService.ingest_statement(db, merchant_id, contents, filename=file.filename)
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+

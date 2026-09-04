@@ -9,6 +9,7 @@ import DecisionCenter from './components/DecisionCenter';
 import CopilotChat from './components/CopilotChat';
 import DataQualityModal from './components/DataQualityModal';
 import UploadStatementModal from './components/UploadStatementModal';
+import LoginPage from './components/LoginPage';
 import {
   fetchMerchants,
   fetchMerchantSummary,
@@ -23,8 +24,25 @@ import {
 } from './services/api';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('runwayiq_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [merchants, setMerchants] = useState([]);
-  const [selectedMerchantId, setSelectedMerchantId] = useState('merch_urbancart');
+  const [selectedMerchantId, setSelectedMerchantId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('runwayiq_user');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return parsed?.merchant_id || 'merch_urbancart';
+    } catch {
+      return 'merch_urbancart';
+    }
+  });
   const [activeTab, setActiveTab] = useState('decision'); // 'decision', 'overview', 'simulator'
   const [summary, setSummary] = useState(null);
   const [cashflow, setCashflow] = useState(null);
@@ -156,11 +174,29 @@ export default function App() {
     }
   };
 
+  // Auth Handlers
+  const handleLoginSuccess = (user) => {
+    setCurrentUser(user);
+    if (user.merchant_id) {
+      setSelectedMerchantId(user.merchant_id);
+    }
+    localStorage.setItem('runwayiq_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('runwayiq_user');
+  };
+
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} merchants={merchants} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
       <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-5 flex-1">
         
-        {/* Header with 3 Simple Navigation Tabs & Store Selector */}
+        {/* Header with 3 Simple Navigation Tabs, Store Selector & User Profile */}
         <Header
           merchants={merchants}
           selectedMerchantId={selectedMerchantId}
@@ -170,6 +206,8 @@ export default function App() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           onOpenUpload={() => setIsUploadModalOpen(true)}
+          currentUser={currentUser}
+          onLogout={handleLogout}
         />
 
         {/* Error Alert Banner */}

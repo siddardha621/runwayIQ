@@ -122,3 +122,50 @@ def test_upload_merchant_statement_csv():
     assert data["rows_processed"] == 2
     assert data["inflows_added"] == 1
     assert data["outflows_added"] == 1
+
+
+def test_upload_statement_with_balance_sync():
+    csv_with_balance = (
+        b"Date,Description,Credit,Debit,Balance\n"
+        b"2026-08-28,Opening Balance,0.0,0.0,850000.00\n"
+        b"2026-08-29,Vendor Payout,0.0,20000.00,830000.00\n"
+        b"2026-08-30,Client Settlement,120000.00,0.0,950000.00\n"
+    )
+    response = client.post(
+        "/api/v1/merchants/merch_urbancart/upload-statement",
+        files={"file": ("hdfc_statement.csv", csv_with_balance, "text/csv")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["closing_balance_extracted"] == 950000.0
+    assert data["new_cash"] == 950000.0
+
+
+def test_upload_excel_statement():
+    import io
+    import openpyxl
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Statement"
+    ws.append(["Date", "Description", "Credit", "Debit", "Balance"])
+    ws.append(["2026-08-25", "Client Payout", 75000.0, 0.0, 875000.0])
+    ws.append(["2026-08-26", "Office Supplies", 0.0, 5000.0, 870000.0])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    excel_bytes = buf.getvalue()
+
+    response = client.post(
+        "/api/v1/merchants/merch_urbancart/upload-statement",
+        files={"file": ("statement.xlsx", excel_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["rows_processed"] == 2
+    assert data["inflows_added"] == 1
+    assert data["outflows_added"] == 1
+    assert data["closing_balance_extracted"] == 870000.0
+

@@ -6,9 +6,11 @@ import {
   RefreshCw, 
   CheckCircle2, 
   LineChart, 
-  Sparkles,
-  ShieldCheck,
-  UploadCloud
+  Sparkles, 
+  ShieldCheck, 
+  UploadCloud,
+  LogOut,
+  User
 } from 'lucide-react';
 
 export default function Header({ 
@@ -19,7 +21,9 @@ export default function Header({
   loading,
   activeTab,
   onSelectTab,
-  onOpenUpload
+  onOpenUpload,
+  currentUser,
+  onLogout
 }) {
   const tabs = [
     { id: 'decision', label: 'Safety Decision Check', icon: <CheckCircle2 className="w-4.5 h-4.5" /> },
@@ -71,7 +75,7 @@ export default function Header({
               <button
                 key={tab.id}
                 onClick={() => onSelectTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-white text-blue-600 shadow-sm border border-slate-200 font-bold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
@@ -84,9 +88,9 @@ export default function Header({
           })}
         </nav>
 
-        {/* Merchant Switcher Dropdown & Upload Action */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end">
-          <div className="relative w-full md:w-68">
+        {/* Right Section: Merchant Switcher, Upload Action, and User Profile */}
+        <div className="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
+          <div className="relative w-full md:w-60">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               <Store className="w-4.5 h-4.5 text-blue-600" />
             </div>
@@ -109,8 +113,8 @@ export default function Header({
 
           <button
             onClick={onOpenUpload}
-            className="hidden md:flex items-center gap-2 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-bold border border-blue-200 transition shadow-sm"
-            title="Import Bank or Settlement CSV Statement"
+            className="hidden md:flex items-center gap-2 px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-sm font-bold border border-blue-200 transition shadow-sm cursor-pointer"
+            title="Import Bank or Settlement Statement (PDF, Excel, CSV)"
           >
             <UploadCloud className="w-4 h-4 text-blue-600" />
             <span>Upload Statement</span>
@@ -119,12 +123,33 @@ export default function Header({
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="hidden md:flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold border border-slate-200 transition disabled:opacity-50 shadow-sm"
+            className="hidden md:flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold border border-slate-200 transition disabled:opacity-50 shadow-sm cursor-pointer"
             title="Refresh Ledger & Forecasts"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-600' : ''}`} />
             <span>Sync</span>
           </button>
+
+          {/* User Profile / Logout Button */}
+          {currentUser && (
+            <div className="flex items-center gap-2 pl-1 border-l border-slate-200 ml-1">
+              <div className="hidden lg:flex flex-col text-right">
+                <span className="text-xs font-bold text-slate-900 leading-tight">
+                  {currentUser.business_name || 'Admin User'}
+                </span>
+                <span className="text-[10px] text-blue-600 font-semibold">
+                  {currentUser.role || 'Merchant Admin'}
+                </span>
+              </div>
+              <button
+                onClick={onLogout}
+                className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition cursor-pointer"
+                title="Switch Merchant / Sign Out"
+              >
+                <LogOut className="w-4.5 h-4.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
