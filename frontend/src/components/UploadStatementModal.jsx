@@ -6,6 +6,7 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
   const [file, setFile] = useState(null);
   const [customBalance, setCustomBalance] = useState('');
   const [autoDetected, setAutoDetected] = useState(false);
+  const [isUpiNotice, setIsUpiNotice] = useState(false);
   const [replaceMode, setReplaceMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -21,6 +22,13 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
       setResult(null);
       setAutoDetected(false);
 
+      const fname = selectedFile.name.toLowerCase();
+      const looksLikeUpi = fname.includes('phonepe') || fname.includes('gpay') || fname.includes('paytm') || fname.includes('upi');
+      setIsUpiNotice(looksLikeUpi);
+      if (looksLikeUpi && !customBalance) {
+        setCustomBalance('2000');
+      }
+
       // Client-side quick scan for CSV / TXT files to pre-fill closing balance
       const ext = selectedFile.name.toLowerCase().split('.').pop();
       if (ext === 'csv' || ext === 'txt') {
@@ -28,6 +36,12 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
         reader.onload = (evt) => {
           try {
             const text = evt.target.result;
+            const textLow = text.toLowerCase();
+            if (textLow.includes('phonepe') || textLow.includes('upi transaction') || textLow.includes('utr:')) {
+              setIsUpiNotice(true);
+              if (!customBalance) setCustomBalance('2000');
+            }
+
             // Scan for closing balance text
             const textMatch = text.match(/(?:closing|available|book|net|clear)\s*balance\s*[:\-]?(?:\s*(?:inr|rs\.?|₹))?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i);
             if (textMatch && textMatch[1]) {
@@ -210,6 +224,19 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
               </div>
             </div>
 
+            {/* PhonePe / UPI Notice Banner */}
+            {isUpiNotice && (
+              <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300/80 text-amber-900 space-y-1.5 animate-fadeIn">
+                <div className="flex items-center gap-2 font-bold text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>PhonePe / UPI Statement Detected</span>
+                </div>
+                <p className="text-xs text-amber-800 leading-relaxed font-medium">
+                  PhonePe statements contain UPI payment history (credits & debits) without an official bank balance column (UPI apps only record transfers, not core bank ledgers). RunwayIQ extracts all your transactions! <strong>Please confirm or enter your live bank balance (e.g. ₹2,000) below</strong> to synchronize your store cash.
+                </p>
+              </div>
+            )}
+
             {/* Target / Verified Closing Bank Balance Input */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -233,12 +260,14 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
                     setCustomBalance(e.target.value);
                     setAutoDetected(false);
                   }}
-                  placeholder="Auto-extracted from file or enter closing balance (e.g. 885000)"
+                  placeholder="Auto-extracted or enter live bank balance (e.g. 2000)"
                   className="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition font-mono"
                 />
               </div>
               <p className="text-[11px] text-slate-500 mt-1 font-medium">
-                Closing balance extracted from your statement will synchronize your store's live bank cash ledger.
+                {isUpiNotice
+                  ? "Enter your actual bank account balance (e.g. ₹2,000) to align your live store cash ledger."
+                  : "Closing balance extracted from your statement will synchronize your store's live bank cash ledger."}
               </p>
             </div>
 

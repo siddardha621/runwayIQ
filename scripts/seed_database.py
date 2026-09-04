@@ -156,6 +156,25 @@ def seed_database():
             db.add(ob)
         db.commit()
 
+        # Seed demo user credentials
+        from backend.models.auth import UserAuth, hash_password
+        db.query(UserAuth).delete()
+        demo_users = [
+            ("admin@urbancart.in", "merch_urbancart", "admin123"),
+            ("finance@kiteaura.com", "merch_kiteaura", "admin123"),
+            ("ops@freshdrop.co", "merch_freshdrop", "admin123"),
+            ("accounts@apexlogistics.in", "merch_newonboard", "admin123"),
+        ]
+        for email, m_id, pwd in demo_users:
+            auth_user = UserAuth(
+                email=email,
+                merchant_id=m_id,
+                password_hash=hash_password(pwd),
+                role="Merchant Administrator",
+            )
+            db.add(auth_user)
+        db.commit()
+
         print("[DB SEED] Database seeding completed successfully!")
     except Exception as exc:
         db.rollback()

@@ -1,6 +1,6 @@
 # Merchant Cash-Flow Decision Intelligence System
 ### Autonomous Financial Decision-Support System for Merchants Under Cash-Flow Uncertainty
-> **Built for Razorpay Bangalore Internship Submission** | Paradigm: **Forecast → Diagnose → Simulate → Decide → Explain**
+> **RunwayIQ Engine** | Paradigm: **Forecast → Diagnose → Simulate → Decide → Explain**
 
 ---
 
@@ -161,7 +161,7 @@ Verifies:
 
 ---
 
-## 10. Core Distinctions from Razorpay / Conventional Dashboards
+## 10. Core Distinctions from Conventional Dashboards
 - **Not a passive report**: Evaluates proposed commitments before money leaves the bank.
 - **Asymmetric risk weighting**: Formulated to minimize catastrophic default over generic statistical loss.
 - **Transparent evidence**: Every reason maps directly to verifiable mathematical equations.

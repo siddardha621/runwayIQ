@@ -244,3 +244,80 @@ def test_get_merchant_statement_history():
     assert "total_debits" in data
 
 
+def test_login_or_register_new_merchant_with_real_email():
+    import uuid
+    unique_email = f"fresh_{uuid.uuid4().hex[:6]}@gmail.com"
+    payload = {
+        "email": unique_email,
+        "password": "SecurePassword123",
+        "business_name": "Fresh Organic Store",
+        "initial_balance": 2000.0,
+    }
+    response = client.post("/api/v1/merchants/login-or-register", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["email"] == unique_email
+    assert data["business_name"] == "Fresh Organic Store"
+    assert data["is_new"] is True
+    assert "merch_" in data["merchant_id"]
+
+
+def test_login_existing_merchant_and_wrong_password():
+    import uuid
+    test_email = f"existing_{uuid.uuid4().hex[:6]}@gmail.com"
+    # First register
+    client.post("/api/v1/merchants/login-or-register", json={"email": test_email, "password": "SecurePassword123"})
+
+    # Attempt login with correct password
+    payload = {"email": test_email, "password": "SecurePassword123"}
+    resp = client.post("/api/v1/merchants/login-or-register", json=payload)
+    assert resp.status_code == 200
+    assert resp.json()["is_new"] is False
+
+    # Attempt login with wrong password
+    wrong_payload = {"email": test_email, "password": "WrongPassword"}
+    wrong_resp = client.post("/api/v1/merchants/login-or-register", json=wrong_payload)
+    assert wrong_resp.status_code == 401
+
+
+def test_reset_password_endpoint():
+    import uuid
+    test_email = f"reset_{uuid.uuid4().hex[:6]}@gmail.com"
+    client.post("/api/v1/merchants/login-or-register", json={"email": test_email, "password": "OldPassword123"})
+
+    reset_payload = {"email": test_email, "new_password": "NewPassword456"}
+    reset_resp = client.post("/api/v1/merchants/reset-password", json=reset_payload)
+    assert reset_resp.status_code == 200
+
+    # Verify new password works
+    login_payload = {"email": test_email, "password": "NewPassword456"}
+    login_resp = client.post("/api/v1/merchants/login-or-register", json=login_payload)
+    assert login_resp.status_code == 200
+
+
+
+def test_upload_phonepe_statement_not_extracting_platform_fee_as_balance():
+    m_id = _get_test_merchant()
+    # PhonePe text simulation with a ₹2,000 debit and a ₹6.00 platform fee
+    phonepe_csv = (
+        b"Date,Description,Amount,Type\n"
+        b"2026-08-15,Paid to Merchant XYZ (Platform fee Rs 6.00),2000.00,OUTFLOW\n"
+        b"2026-08-20,Received from Client ABC,1500.00,INFLOW\n"
+    )
+    response = client.post(
+        f"/api/v1/merchants/{m_id}/upload-statement",
+        files={"file": ("PhonePe_Statement_Aug2026.csv", phonepe_csv, "text/csv")},
+        data={"closing_balance": "2000.00", "replace_mode": "true"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    # Crucial assertion: Closing balance must NOT be set to the ₹6.00 fee!
+    assert data["closing_balance_extracted"] != 6.0
+    assert data["new_cash"] == 2000.0
+    assert data["rows_processed"] == 2
+    assert data["inflows_added"] == 1
+    assert data["outflows_added"] == 1
+
+
+

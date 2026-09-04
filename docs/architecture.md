@@ -53,7 +53,7 @@ flowchart TD
 
 Traditional bookkeeping calculates `Revenue - Expenses`. In merchant payments, settlement timing is decoupled from transaction timestamps:
 1. **Transaction Capture**: A customer makes a payment at time $t$.
-2. **Settlement Clearing**: Funds clear on a $T+k$ schedule (e.g. $T+2$ for standard Razorpay settlements) minus payment processing fees and taxes.
+2. **Settlement Clearing**: Funds clear on a $T+k$ schedule (e.g. $T+2$ for standard payment gateway settlements) minus payment processing fees and taxes.
 3. **Refund Events**: Customer returns debit merchant balances directly or offset future settlement batches.
 4. **Cash Balance**:
    $$\text{Ending Cash}_t = \text{Beginning Cash}_t + \text{Settled Inflows}_t - \text{Realized Outflows}_t$$

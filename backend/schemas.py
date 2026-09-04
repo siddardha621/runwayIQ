@@ -236,3 +236,28 @@ class ModelEvaluationResponse(BaseModel):
     anomaly_metrics: Dict[str, Any]
     decision_metrics: Dict[str, Any]
     baseline_comparison: Dict[str, Any]
+
+
+# --- Authentication Schemas ---
+class LoginOrRegisterRequest(BaseModel):
+    email: str
+    password: str
+    business_name: Optional[str] = None
+    business_type: Optional[str] = "Retail & E-commerce"
+    initial_balance: Optional[float] = 2000.0
+
+
+class LoginResponse(BaseModel):
+    merchant_id: str
+    business_name: str
+    business_type: str
+    email: str
+    role: str = "Merchant Administrator"
+    is_new: bool = False
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    new_password: str
+

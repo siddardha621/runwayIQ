@@ -1,7 +1,7 @@
 # Model Card: Cash Flow Forecasting & Decision Intelligence Models
 
 ## 1. Model Details
-- **Organization**: Independent Prototype for Razorpay Internship Submission
+- **Organization**: RunwayIQ Merchant Cashflow Intelligence System
 - **Model Version**: `v1.2.0-hybrid`
 - **Model Architecture**:
   - **Inflow**: Gradient Boosting Regressor (`n_estimators=60`, `max_depth=3`, `learning_rate=0.08`)

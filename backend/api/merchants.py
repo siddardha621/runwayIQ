@@ -14,6 +14,9 @@ from backend.api.schemas import (
     MerchantSummaryResponse,
     DataQualityResponse,
     ObligationResponse,
+    LoginOrRegisterRequest,
+    LoginResponse,
+    ResetPasswordRequest,
 )
 from backend.core.constants import RiskLevel
 
@@ -138,3 +141,97 @@ def get_obligations(merchant_id: str, db: Session = Depends(get_db)):
             "risk_contribution_pct": risk_contrib,
         })
     return result
+
+
+@router.post("/login-or-register", response_model=LoginResponse)
+def login_or_register_merchant(request: LoginOrRegisterRequest, db: Session = Depends(get_db)):
+    """
+    Authenticates an existing merchant or registers a new merchant account with any valid real email (Gmail, etc.).
+    If the account does not exist, automatically creates a dedicated merchant store in SQLite.
+    """
+    import re
+    import uuid
+    from backend.models.auth import UserAuth, hash_password
+
+    normalized_email = request.email.strip().lower()
+    email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+    if not re.match(email_regex, normalized_email):
+        raise HTTPException(status_code=422, detail="Invalid email format. Please provide a valid email address.")
+
+    auth_entry = db.query(UserAuth).filter(UserAuth.email == normalized_email).first()
+
+    if auth_entry:
+        if not auth_entry.verify_password(request.password):
+            raise HTTPException(status_code=401, detail="Incorrect password for this account. Click 'Forgot key?' to reset.")
+        merchant = db.query(Merchant).filter(Merchant.merchant_id == auth_entry.merchant_id).first()
+        if not merchant:
+            raise HTTPException(status_code=404, detail="Merchant store profile not found.")
+        return {
+            "merchant_id": merchant.merchant_id,
+            "business_name": merchant.business_name,
+            "business_type": merchant.business_type,
+            "email": normalized_email,
+            "role": auth_entry.role,
+            "is_new": False,
+            "message": f"Welcome back, {merchant.business_name}!",
+        }
+    else:
+        email_prefix = normalized_email.split("@")[0]
+        clean_slug = re.sub(r"[^a-zA-Z0-9]", "_", email_prefix).strip("_")
+        merchant_id = f"merch_{clean_slug}"
+
+        existing_m = db.query(Merchant).filter(Merchant.merchant_id == merchant_id).first()
+        if existing_m:
+            merchant_id = f"merch_{clean_slug}_{uuid.uuid4().hex[:6]}"
+
+        clean_name = request.business_name.strip() if request.business_name else f"{email_prefix.capitalize()}'s Store"
+        clean_type = request.business_type.strip() if request.business_type else "Retail & E-commerce"
+        starting_bal = float(request.initial_balance) if request.initial_balance is not None and float(request.initial_balance) >= 0 else 2000.0
+
+        new_merchant = Merchant(
+            merchant_id=merchant_id,
+            business_name=clean_name,
+            business_type=clean_type,
+            starting_balance=starting_bal,
+            minimum_operating_cash=1000.0,
+            settlement_cycle="T+1",
+            currency="INR",
+        )
+        db.add(new_merchant)
+        db.commit()
+
+        new_auth = UserAuth(
+            email=normalized_email,
+            merchant_id=merchant_id,
+            password_hash=hash_password(request.password),
+            role="Merchant Administrator",
+        )
+        db.add(new_auth)
+        db.commit()
+
+        return {
+            "merchant_id": merchant_id,
+            "business_name": clean_name,
+            "business_type": clean_type,
+            "email": normalized_email,
+            "role": "Merchant Administrator",
+            "is_new": True,
+            "message": f"Account successfully created for {normalized_email}! Live store initialized.",
+        }
+
+
+@router.post("/reset-password")
+def reset_merchant_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """Resets password for any registered email."""
+    from backend.models.auth import UserAuth, hash_password
+    normalized_email = request.email.strip().lower()
+    auth_entry = db.query(UserAuth).filter(UserAuth.email == normalized_email).first()
+    if not auth_entry:
+        raise HTTPException(status_code=404, detail=f"No account found for '{normalized_email}'.")
+    if len(request.new_password) < 4:
+        raise HTTPException(status_code=422, detail="Password must be at least 4 characters long.")
+
+    auth_entry.password_hash = hash_password(request.new_password)
+    db.commit()
+    return {"success": True, "message": f"Password for '{normalized_email}' has been successfully updated."}
+

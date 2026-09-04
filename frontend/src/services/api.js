@@ -109,3 +109,38 @@ export async function uploadStatement(merchantId, file, closingBalance = null, r
   }
   return res.json();
 }
+
+export async function loginOrRegister(email, password, businessName = null, initialBalance = 2000.0) {
+  const res = await fetch(`${BASE_URL}/merchants/login-or-register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      password,
+      business_name: businessName,
+      initial_balance: initialBalance,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Authentication failed');
+  }
+  return res.json();
+}
+
+export async function resetPassword(email, newPassword) {
+  const res = await fetch(`${BASE_URL}/merchants/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      new_password: newPassword,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Password reset failed');
+  }
+  return res.json();
+}
+

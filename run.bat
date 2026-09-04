@@ -1,5 +1,5 @@
 @echo off
-title Razorpay CashFlow Intelligence
+title RunwayIQ - Merchant Cashflow Intelligence
 echo Starting Backend and Frontend...
 
 start "Backend Server" cmd /k "py -3.11 -m uvicorn backend.main:app --port 8000 --reload"

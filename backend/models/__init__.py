@@ -8,6 +8,7 @@ from backend.models.obligation import Obligation
 from backend.models.forecast import Forecast
 from backend.models.scenario import Scenario
 from backend.models.decision import Decision
+from backend.models.auth import UserAuth, hash_password
 
 __all__ = [
     "Base",
@@ -22,4 +23,7 @@ __all__ = [
     "Forecast",
     "Scenario",
     "Decision",
+    "UserAuth",
+    "hash_password",
 ]
+

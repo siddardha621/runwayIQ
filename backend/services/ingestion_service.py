@@ -8,7 +8,7 @@ import io
 import re
 import uuid
 from datetime import datetime, date, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from backend.models.merchant import Merchant
@@ -193,6 +193,124 @@ class IngestionService:
         return mapping
 
     @classmethod
+    def parse_statement_text_rows(cls, text: str) -> Tuple[List[Dict[str, Any]], Optional[float], bool]:
+        """
+        Parses transactions from raw statement text across PDF extractions.
+        Distinguishes between standard bank statements with balance columns
+        and UPI app statements (PhonePe, Google Pay, Paytm) that do NOT have bank balances.
+        Guarantees:
+        - Platform fees (e.g. ₹6.00) or UTRs are NEVER confused with bank balances or main amounts.
+        - Accepts ALL transaction amounts (> 0).
+        """
+        is_upi = any(k in text.lower() for k in ("phonepe", "upi transaction id", "google pay", "gpay", "paytm", "bhim", "utr:"))
+        has_balance_col = any(h in text.lower() for h in ("closing balance", "running balance", "clear balance", "balance (inr)", "bal inr", "bal (cr/dr)"))
+
+        date_regex = re.compile(
+            r"(?:^|[\s\b])(\d{1,4}[-/\.]\d{1,2}[-/\.]\d{2,4}|\d{1,2}[-\s/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-\s/]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{2,4})",
+            re.IGNORECASE,
+        )
+
+        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        blocks = []
+        curr_block = []
+
+        for l in lines:
+            if date_regex.search(l[:35]):
+                if curr_block:
+                    blocks.append(curr_block)
+                curr_block = [l]
+            elif curr_block:
+                curr_block.append(l)
+        if curr_block:
+            blocks.append(curr_block)
+
+        rows = []
+        last_extracted_balance = None
+
+        for blk in blocks:
+            d_match = date_regex.search(blk[0][:35])
+            if not d_match:
+                continue
+            date_str = d_match.group(1).strip()
+
+            desc = ""
+            direction = None
+            amount = 0.0
+            fee = 0.0
+            row_balance = None
+
+            for idx, l in enumerate(blk):
+                low = l.lower()
+                if any(k in low for k in ("utr:", "txn id:", "transaction id:", "statement of", "page ", "generated on")):
+                    continue
+
+                fee_match = re.search(r"(?i)(?:platform\s*fee|convenience\s*fee|fee|gst|charges?)[\s:]*(?:₹|rs\.?|inr|\$)?\s*([0-9]+(?:\.[0-9]{1,2})?)", l)
+                if fee_match:
+                    fee = float(fee_match.group(1))
+
+                bal_match = re.search(r"(?i)\b(?:closing\s*bal(?:ance)?|avail(?:able)?\s*bal(?:ance)?|clear\s*bal(?:ance)?)\s*[:\-=]?\s*(?:₹|rs\.?|inr|\$)?\s*([0-9,]+(?:\.[0-9]{1,2})?)", l)
+                if bal_match:
+                    row_balance = cls.parse_amount(bal_match.group(1))
+
+                if any(k in low for k in ("cr", "credit", "credited", "deposit", "received from", "received", "payout", "settlement", "cashback")):
+                    direction = "CREDIT"
+                elif any(k in low for k in ("dr", "debit", "debited", "paid to", "payment to", "withdrawal", "transfer to", "sent to", "expense", "bill paid")):
+                    direction = "DEBIT"
+
+                if any(k in low for k in ("paid to", "received from", "transfer to", "payment to", "settlement", "payout", "upi", "neft", "rtgs", "imps", "swiggy", "zomato", "amazon", "flipkart", "supplier", "vendor")):
+                    if not desc:
+                        desc = l.strip()
+
+                line_for_amt = l[d_match.end():] if idx == 0 else l
+                line_for_amt = re.sub(r"\b\d{10,}\b", "", line_for_amt)
+                if fee_match:
+                    line_for_amt = line_for_amt[:fee_match.start()] + line_for_amt[fee_match.end():]
+
+                numbers = re.findall(
+                    r"(?:₹|Rs\.?|INR|\$)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)",
+                    line_for_amt,
+                )
+                line_amts = [cls.parse_amount(n) for n in numbers if cls.parse_amount(n) > 0]
+                if fee > 0:
+                    line_amts = [a for a in line_amts if abs(a - fee) > 0.001]
+
+                if line_amts:
+                    if has_balance_col and len(line_amts) >= 2 and row_balance is None:
+                        amount = line_amts[0]
+                        row_balance = line_amts[-1]
+                    else:
+                        amount = line_amts[0]
+
+            if amount <= 0:
+                continue
+
+            if not desc:
+                desc = blk[0][d_match.end():].strip() or "Bank Statement Entry"
+            if not direction:
+                direction = "DEBIT"
+
+            row_dict = {
+                "date": date_str,
+                "description": desc,
+                "type": direction,
+                "amount": amount,
+            }
+            if direction == "CREDIT":
+                row_dict["credit"] = amount
+                row_dict["debit"] = 0.0
+            else:
+                row_dict["debit"] = amount
+                row_dict["credit"] = 0.0
+
+            if row_balance is not None and row_balance > 0:
+                row_dict["balance"] = str(row_balance)
+                last_extracted_balance = row_balance
+
+            rows.append(row_dict)
+
+        return rows, last_extracted_balance, is_upi
+
+    @classmethod
     def ingest_statement(
         cls,
         db: Session,
@@ -216,6 +334,7 @@ class IngestionService:
         rows_data = []
         raw_text_for_summary = ""
         extracted_balance = None
+        is_upi_detected = False
 
         # 1. EXCEL SPREADSHEETS (.xlsx, .xls)
         if ext in ("xlsx", "xls"):
@@ -227,7 +346,6 @@ class IngestionService:
                 if not all_rows:
                     raise ValueError("Excel file is empty.")
 
-                # Locate header row: row containing at least 2 financial keywords
                 header_idx = 0
                 keywords = ("date", "description", "narration", "credit", "debit", "deposit", "withdrawal", "balance", "amount", "particulars", "remarks")
                 for idx, r in enumerate(all_rows):
@@ -248,7 +366,6 @@ class IngestionService:
                         if i < len(raw_headers) and cell_val is not None:
                             row_dict[raw_headers[i]] = str(cell_val).strip()
 
-                    # Standardize into canonical keys
                     canonical_row = {}
                     for canon_key, orig_col in col_map.items():
                         if orig_col in row_dict:
@@ -274,54 +391,12 @@ class IngestionService:
                 raw_text_for_summary = pdf_text
                 extracted_balance = cls.extract_closing_balance_from_text(pdf_text)
 
-                # Parse tabular lines from PDF text
-                lines = [l.strip() for l in pdf_text.splitlines() if l.strip()]
-                for line in lines:
-                    # Match date anywhere within first 35 chars (handles serial numbers like "1 31/08/2026")
-                    date_match = re.search(
-                        r"(?:^|[\s\b])(\d{1,4}[-/\.]\d{1,2}[-/\.]\d{2,4}|\d{1,2}[-\s/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-\s/]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{2,4})",
-                        line[:35],
-                        re.IGNORECASE,
-                    )
-                    if date_match:
-                        date_str = date_match.group(1).strip()
-                        # Extract all numbers from line
-                        numbers = re.findall(
-                            r"(?:₹|Rs\.?|INR|\$)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)",
-                            line,
-                        )
-                        amounts = [cls.parse_amount(n) for n in numbers if cls.parse_amount(n) > 0]
-                        desc = line[date_match.end():].strip()
+                pdf_rows, pdf_bal, is_upi = cls.parse_statement_text_rows(pdf_text)
+                rows_data.extend(pdf_rows)
+                is_upi_detected = is_upi
 
-                        if amounts:
-                            # 3 amounts: [Debit, Credit, Balance] or [RefNo, Amount, Balance]
-                            if len(amounts) >= 3:
-                                extracted_balance = amounts[-1]
-                                debit_val = amounts[0] if amounts[0] < amounts[-1] else 0.0
-                                credit_val = amounts[1] if amounts[1] < amounts[-1] else 0.0
-                                if "cr" in line.lower() or "deposit" in line.lower() or "payout" in line.lower():
-                                    rows_data.append({"date": date_str, "description": desc, "credit": credit_val or amounts[0], "balance": str(extracted_balance)})
-                                else:
-                                    rows_data.append({"date": date_str, "description": desc, "debit": debit_val or amounts[0], "balance": str(extracted_balance)})
-
-                            # 2 amounts: usually [Amount, Running Balance]
-                            elif len(amounts) == 2:
-                                extracted_balance = amounts[1]
-                                amt = amounts[0]
-                                is_inflow = any(x in line.lower() for x in ("cr", "credit", "deposit", "payout", "settlement", "inflow", "received"))
-                                if is_inflow:
-                                    rows_data.append({"date": date_str, "description": desc, "credit": amt, "balance": str(extracted_balance)})
-                                else:
-                                    rows_data.append({"date": date_str, "description": desc, "debit": amt, "balance": str(extracted_balance)})
-
-                            # 1 amount
-                            elif len(amounts) == 1:
-                                amt = amounts[0]
-                                is_inflow = any(x in line.lower() for x in ("cr", "credit", "deposit", "payout", "settlement", "inflow", "received"))
-                                if is_inflow:
-                                    rows_data.append({"date": date_str, "description": desc, "credit": amt})
-                                else:
-                                    rows_data.append({"date": date_str, "description": desc, "debit": amt})
+                if pdf_bal is not None:
+                    extracted_balance = pdf_bal
 
             except Exception as e:
                 raise ValueError(f"Failed to parse PDF statement: {str(e)}")
@@ -531,12 +606,18 @@ class IngestionService:
             new_cash = current_ledger["current_balance"]
 
 
-        balance_msg = f" Bank closing balance synchronized to ₹{new_cash:,.2f}." if final_balance else ""
+        if final_balance:
+            balance_msg = f" Bank closing balance synchronized to ₹{new_cash:,.2f}."
+        elif is_upi_detected:
+            balance_msg = f" Note: UPI app statement (PhonePe/GPay) parsed without core bank balance column. Live store cash updated to ₹{new_cash:,.2f} based on transaction flow."
+        else:
+            balance_msg = ""
 
         return {
             "success": True,
             "merchant_id": merchant_id,
             "filename": filename,
+            "is_upi_statement": is_upi_detected,
             "rows_processed": rows_processed,
             "inflows_added": inflows_added,
             "outflows_added": outflows_added,

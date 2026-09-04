@@ -51,10 +51,11 @@ class FinancialAnomalyDetector:
 
         # 1. Inflow / Revenue Drop Check
         base_inflow_mean = float(baseline_df["inflows"].mean()) if not baseline_df.empty else 1.0
-        base_inflow_std = float(baseline_df["inflows"].std()) if not baseline_df.empty and baseline_df["inflows"].std() > 0 else (base_inflow_mean * 0.25)
+        base_inflow_std = float(baseline_df["inflows"].std()) if not baseline_df.empty and baseline_df["inflows"].std() > 0 else (max(1.0, base_inflow_mean) * 0.25)
         recent_inflow_mean = float(eval_df["inflows"].mean()) if not eval_df.empty else base_inflow_mean
 
-        inflow_z = (recent_inflow_mean - base_inflow_mean) / base_inflow_mean
+        base_inflow_safe = max(1.0, base_inflow_mean)
+        inflow_z = (recent_inflow_mean - base_inflow_mean) / base_inflow_safe
         revenue_drop_score = 0.0
 
         if inflow_z <= -0.10:  # Drop >= 10%

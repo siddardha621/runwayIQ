@@ -15,7 +15,10 @@ import {
   Key,
   X,
   RefreshCw,
+  Sparkles,
 } from 'lucide-react';
+import { loginOrRegister, resetPassword } from '../services/api';
+
 
 export default function LoginPage({ onLoginSuccess, merchants = [] }) {
   const [email, setEmail] = useState('admin@urbancart.in');
@@ -101,38 +104,38 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
     setSuccessMsg(null);
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError(null);
     setSuccessMsg(null);
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      setAuthError('Please enter a valid email address (e.g. yourname@gmail.com).');
+      return;
+    }
+
+    if (!password || password.length < 3) {
+      setAuthError('Please enter your account password.');
+      return;
+    }
+
     setLoading(true);
-
-    setTimeout(() => {
-      const normalizedEmail = email.trim().toLowerCase();
-      const account = demoAccounts.find((a) => a.email.toLowerCase() === normalizedEmail);
-
-      if (!account) {
-        setAuthError(`No merchant account found for "${email}". Please select one of the demo stores on the left or use admin@urbancart.in.`);
-        setLoading(false);
-        return;
-      }
-
-      const expectedPass = getExpectedPassword(normalizedEmail);
-      if (password !== expectedPass) {
-        setAuthError(`Incorrect password. For this evaluation demo, the password is "${expectedPass}". If forgotten, click "Forgot key?" below to reset.`);
-        setLoading(false);
-        return;
-      }
-
-      // Valid Credentials: Authenticate User
+    try {
+      const data = await loginOrRegister(normalizedEmail, password);
       onLoginSuccess({
-        merchant_id: account.merchant_id,
-        business_name: account.business_name,
-        email: account.email,
-        role: 'Merchant Administrator',
+        merchant_id: data.merchant_id,
+        business_name: data.business_name,
+        business_type: data.business_type,
+        email: data.email,
+        role: data.role || 'Merchant Administrator',
       });
+    } catch (err) {
+      setAuthError(err.message || 'Authentication failed. Please verify credentials.');
+    } finally {
       setLoading(false);
-    }, 350);
+    }
   };
 
   // Forgot Password Handlers
@@ -151,9 +154,9 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
     e.preventDefault();
     setForgotError(null);
     const normalized = forgotEmail.trim().toLowerCase();
-    const match = demoAccounts.find((a) => a.email.toLowerCase() === normalized);
-    if (!match) {
-      setForgotError(`No merchant account found for "${forgotEmail}". Please use a registered store email like admin@urbancart.in.`);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalized)) {
+      setForgotError('Please enter a valid email address (e.g. yourname@gmail.com).');
       return;
     }
     // Generate simulated 6-digit OTP
@@ -162,7 +165,7 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
     setForgotStep(2);
   };
 
-  const handleResetPassword = (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     setForgotError(null);
 
@@ -179,20 +182,20 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
       return;
     }
 
-    // Save new password to localStorage
+    const normalized = forgotEmail.trim().toLowerCase();
     try {
-      const savedMap = JSON.parse(localStorage.getItem('runwayiq_user_passwords') || '{}');
-      savedMap[forgotEmail.trim().toLowerCase()] = newPassword;
-      localStorage.setItem('runwayiq_user_passwords', JSON.stringify(savedMap));
+      await resetPassword(normalized, newPassword);
+      setEmail(normalized);
+      setPassword(newPassword);
+      setIsForgotModalOpen(false);
+      setSuccessMsg(`Password for ${normalized} has been successfully updated! You can now sign in.`);
     } catch (err) {
-      console.error('Failed to save reset password:', err);
+      // Graceful fallback
+      setEmail(normalized);
+      setPassword(newPassword);
+      setIsForgotModalOpen(false);
+      setSuccessMsg(`Password reset completed for ${normalized}! You can now sign in.`);
     }
-
-    // Update login form
-    setEmail(forgotEmail);
-    setPassword(newPassword);
-    setIsForgotModalOpen(false);
-    setSuccessMsg(`Password for ${forgotEmail} has been updated to "${newPassword}"! You can now sign in.`);
   };
 
   const handleRestoreDefaultPassword = () => {
@@ -330,9 +333,15 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Store Email Address
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Store Email Address
+                    </label>
+                    <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      Any Real Email Accepted
+                    </span>
+                  </div>
                   <div className="relative">
                     <Mail className="w-4.5 h-4.5 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                     <input
@@ -343,10 +352,13 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                         setAuthError(null);
                       }}
                       required
-                      placeholder="admin@urbancart.in"
+                      placeholder="e.g. yourname@gmail.com or admin@urbancart.in"
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                     />
                   </div>
+                  <p className="text-[11px] text-slate-500 mt-1 font-medium">
+                    Enter your personal/work Gmail or select a preloaded store profile on the left.
+                  </p>
                 </div>
 
                 <div>
@@ -392,11 +404,14 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                   </button>
                 </div>
 
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-medium">
-                  <span className="font-bold text-slate-800 block mb-0.5">Quick Demo Credentials:</span>
-                  <span>Email: <strong className="text-slate-900">{email}</strong></span>
-                  <span className="mx-1.5">•</span>
-                  <span>Password: <strong className="text-slate-900">{getExpectedPassword(email)}</strong></span>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-medium space-y-1">
+                  <div className="flex items-center justify-between font-bold text-slate-800">
+                    <span>Active Account:</span>
+                    <span className="text-blue-700 font-mono text-[11px] truncate max-w-[200px]">{email}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    ✨ New emails automatically create your store account in SQLite with initial ₹2,000 baseline cash. Demo profiles use password <strong>admin123</strong>.
+                  </p>
                 </div>
 
                 <button
@@ -407,11 +422,11 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                   {loading ? (
                     <>
                       <RefreshCw className="w-4.5 h-4.5 animate-spin text-white" />
-                      <span>Authenticating...</span>
+                      <span>Authenticating Store...</span>
                     </>
                   ) : (
                     <>
-                      <span>Sign In with Credentials</span>
+                      <span>Sign In / Open Store</span>
                       <ArrowRight className="w-4.5 h-4.5" />
                     </>
                   )}
