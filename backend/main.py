@@ -1,7 +1,4 @@
-"""
-Main FastAPI Application Entrypoint.
-Merchant Cash-Flow Decision Intelligence System.
-"""
+
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse

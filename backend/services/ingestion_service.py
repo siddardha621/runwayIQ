@@ -16,6 +16,7 @@ from backend.models.settlement import Settlement
 from backend.models.expense import Expense
 from backend.models.transaction import Transaction
 from backend.models.refund import Refund
+from backend.models.obligation import Obligation
 from backend.core.exceptions import MerchantNotFoundError
 
 
@@ -482,6 +483,40 @@ class IngestionService:
             db.query(Settlement).filter(Settlement.merchant_id == merchant_id).delete()
             db.query(Expense).filter(Expense.merchant_id == merchant_id).delete()
             db.query(Transaction).filter(Transaction.merchant_id == merchant_id).delete()
+
+            # Clean old demo obligations if they vastly exceed the new statement balance
+            old_obs = db.query(Obligation).filter(Obligation.merchant_id == merchant_id).all()
+            total_ob_amt = sum(o.amount for o in old_obs)
+            target_bal = float(final_balance if (final_balance is not None and final_balance > 0) else (manual_balance or 2000.0))
+            if total_ob_amt > target_bal * 1.5 or any(o.amount > target_bal for o in old_obs):
+                db.query(Obligation).filter(Obligation.merchant_id == merchant_id).delete()
+                starter_obs = [
+                    Obligation(
+                        obligation_id=f"ob_{merchant_id}_tax",
+                        merchant_id=merchant_id,
+                        due_date=date(2026, 9, 20),
+                        amount=round(min(500.0, max(100.0, target_bal * 0.25)), 2),
+                        category="TAX",
+                        priority="MANDATORY",
+                        recurring=True,
+                        status="UPCOMING",
+                    ),
+                    Obligation(
+                        obligation_id=f"ob_{merchant_id}_util",
+                        merchant_id=merchant_id,
+                        due_date=date(2026, 9, 12),
+                        amount=round(min(350.0, max(50.0, target_bal * 0.15)), 2),
+                        category="UTILITIES",
+                        priority="HIGH",
+                        recurring=True,
+                        status="UPCOMING",
+                    ),
+                ]
+                db.bulk_save_objects(starter_obs)
+
+            # Recalibrate merchant minimum operating cash floor to match the new scale
+            if merchant.minimum_operating_cash > target_bal:
+                merchant.minimum_operating_cash = round(max(300.0, target_bal * 0.35), 2)
             db.commit()
 
         rows_processed = 0

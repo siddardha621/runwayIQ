@@ -1,8 +1,3 @@
-"""
-Deterministic Decision Engine.
-Evaluates proposed financial commitments under forecast uncertainty, dynamic buffers,
-and strict reliability/abstention gates.
-"""
 
 import json
 import uuid

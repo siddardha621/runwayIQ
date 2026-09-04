@@ -58,6 +58,7 @@ class ForecastService:
             upcoming_obligations=ob_list,
             configured_floor=float(merchant.minimum_operating_cash),
             ref_date=ref_date,
+            current_balance=float(ledger_data["current_balance"]),
         )
         effective_buffer = buffer_info["effective_buffer"]
 
