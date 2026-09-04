@@ -86,11 +86,20 @@ class ForecastResponse(BaseModel):
 
 # --- Obligation Schemas ---
 class CreateObligationRequest(BaseModel):
-    category: str = Field(..., description="PAYROLL, TAX, RENT, SUPPLIER, LOAN, INVENTORY, UTILITIES, OTHER")
+    category: str = Field(..., description="PAYROLL, TAX, RENT, SUPPLIER, LOAN, INVENTORY, UTILITIES, MARKETING, OTHER")
     amount: float = Field(..., gt=0, description="Amount in INR")
     due_date: date = Field(..., description="Due date YYYY-MM-DD")
     priority: str = Field("MANDATORY", description="MANDATORY, HIGH, MEDIUM, DISCRETIONARY")
     recurring: bool = Field(False, description="Whether this bill recurs monthly")
+
+
+class UpdateObligationRequest(BaseModel):
+    category: Optional[str] = Field(None, description="PAYROLL, TAX, RENT, SUPPLIER, LOAN, INVENTORY, UTILITIES, MARKETING, OTHER")
+    amount: Optional[float] = Field(None, gt=0, description="Updated amount in INR")
+    due_date: Optional[date] = None
+    priority: Optional[str] = None
+    recurring: Optional[bool] = None
+    status: Optional[str] = None
 
 
 class ObligationResponse(BaseModel):

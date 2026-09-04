@@ -6,14 +6,17 @@ import {
   Trash2,
   X,
   CheckCircle2,
+  Pencil,
 } from 'lucide-react';
 
 export default function ObligationsTable({
   obligations = [],
   onAddObligation,
+  onUpdateObligation,
   onDeleteObligation,
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingObligation, setEditingObligation] = useState(null);
   const [category, setCategory] = useState('PAYROLL');
   const [amount, setAmount] = useState('');
   const [dueDate, setDueDate] = useState('2026-09-10');
@@ -45,6 +48,8 @@ export default function ObligationsTable({
         return { label: 'Staff Salaries & Wages', icon: '💼' };
       case 'TAX':
         return { label: 'GST & Advance Tax', icon: '🏛️' };
+      case 'MARKETING':
+        return { label: 'Marketing & Ad Campaigns', icon: '📣' };
       case 'RENT':
         return { label: 'Shop & Warehouse Rent', icon: '🏢' };
       case 'SUPPLIER':
@@ -56,6 +61,26 @@ export default function ObligationsTable({
       default:
         return { label: cat || 'Operating Expense', icon: '📄' };
     }
+  };
+
+  const openAddModal = () => {
+    setEditingObligation(null);
+    setCategory('PAYROLL');
+    setAmount('');
+    setDueDate('2026-09-10');
+    setPriority('MANDATORY');
+    setRecurring(true);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (ob) => {
+    setEditingObligation(ob);
+    setCategory(ob.category || 'PAYROLL');
+    setAmount(ob.amount || '');
+    setDueDate(ob.due_date || '2026-09-10');
+    setPriority(ob.priority || 'MANDATORY');
+    setRecurring(ob.recurring !== false);
+    setIsModalOpen(true);
   };
 
   const applyTemplate = (cat, defaultAmt, defaultPrio, defaultDays) => {
@@ -71,18 +96,28 @@ export default function ObligationsTable({
     e.preventDefault();
     const numAmt = Number(amount);
     if (!numAmt || numAmt <= 0) return;
-    if (!onAddObligation) return;
 
     try {
       setSubmitting(true);
-      await onAddObligation({
-        category,
-        amount: numAmt,
-        due_date: dueDate,
-        priority,
-        recurring,
-      });
+      if (editingObligation && onUpdateObligation) {
+        await onUpdateObligation(editingObligation.obligation_id, {
+          category,
+          amount: numAmt,
+          due_date: dueDate,
+          priority,
+          recurring,
+        });
+      } else if (onAddObligation) {
+        await onAddObligation({
+          category,
+          amount: numAmt,
+          due_date: dueDate,
+          priority,
+          recurring,
+        });
+      }
       setIsModalOpen(false);
+      setEditingObligation(null);
       setAmount('');
     } catch (err) {
       console.error(err);
@@ -102,7 +137,7 @@ export default function ObligationsTable({
             <CalendarClock className="w-6 h-6 text-blue-600 flex-shrink-0" />
             <div>
               <h3 className="text-lg font-bold text-slate-900">Scheduled Bills & Upcoming Payables</h3>
-              <p className="text-xs text-slate-500 font-medium">Salaries, GST taxes, rent, and vendor invoices</p>
+              <p className="text-xs text-slate-500 font-medium">Click any bill to edit dynamic amounts (salaries, GST, marketing)</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -112,7 +147,7 @@ export default function ObligationsTable({
             {onAddObligation && (
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={openAddModal}
                 className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -129,11 +164,11 @@ export default function ObligationsTable({
               <p className="mb-2">No upcoming bills scheduled yet.</p>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={openAddModal}
                 className="text-blue-600 font-bold hover:underline inline-flex items-center gap-1 text-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
-                Schedule Employee Salaries, GST, or Rent
+                Schedule Employee Salaries, GST, or Marketing
               </button>
             </div>
           ) : (
@@ -144,7 +179,7 @@ export default function ObligationsTable({
               return (
                 <div
                   key={ob.obligation_id}
-                  className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-slate-300 transition flex items-center justify-between gap-3 shadow-2xs group"
+                  className="p-3.5 sm:p-4 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-200 hover:bg-blue-50/30 transition flex items-center justify-between gap-3 shadow-2xs group"
                 >
                   <div className="flex items-start gap-3">
                     <span className="text-xl mt-0.5">{meta.icon}</span>
@@ -170,7 +205,7 @@ export default function ObligationsTable({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 text-right">
+                  <div className="flex items-center gap-2 sm:gap-3 text-right">
                     <div>
                       <span className="font-mono font-extrabold text-base sm:text-lg text-slate-900 block">
                         {formatINR(ob.amount)}
@@ -179,16 +214,30 @@ export default function ObligationsTable({
                         {ob.priority}
                       </span>
                     </div>
-                    {onDeleteObligation && (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteObligation(ob.obligation_id)}
-                        title="Mark Paid / Remove Bill"
-                        className="opacity-40 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+
+                    {/* Action Buttons: Edit & Delete */}
+                    <div className="flex items-center gap-1">
+                      {onUpdateObligation && (
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(ob)}
+                          title="Edit Bill (Adjust Amount / Due Date)"
+                          className="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-blue-100 transition cursor-pointer"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {onDeleteObligation && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteObligation(ob.obligation_id)}
+                          title="Mark Paid / Remove Bill"
+                          className="opacity-40 group-hover:opacity-100 text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -199,68 +248,86 @@ export default function ObligationsTable({
 
       <div className="mt-4 pt-3 border-t border-slate-100 text-xs sm:text-sm text-slate-600 flex items-center gap-2 font-medium">
         <ArrowUpRight className="w-4 h-4 text-amber-600 flex-shrink-0" />
-        <span>These obligations are locked into your Safety Reserve to prevent any bounced checks or payroll shortfalls.</span>
+        <span>You can edit amounts anytime as salaries, GST, or marketing fluctuate. Changes instantly update your safety runway.</span>
       </div>
 
-      {/* ADD BILL MODAL */}
+      {/* ADD / EDIT BILL MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-150">
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <span className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-bold">
-                  🗓️
+                  {editingObligation ? '✏️' : '🗓️'}
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Schedule Upcoming Bill / Payable</h3>
-                  <p className="text-xs text-slate-500 font-medium">Factor future salaries, taxes, or rent into decision checks</p>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {editingObligation ? 'Edit Scheduled Bill / Payable' : 'Schedule Upcoming Bill / Payable'}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {editingObligation
+                      ? 'Adjust dynamic amounts (salaries, taxes, marketing) or change due dates'
+                      : 'Factor future salaries, taxes, marketing, or rent into decision checks'}
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingObligation(null);
+                }}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Quick Presets */}
-            <div className="mb-4">
-              <span className="text-xs font-bold text-slate-600 block mb-1.5 uppercase tracking-wider">
-                1-Click Bill Presets:
-              </span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => applyTemplate('PAYROLL', '3000', 'MANDATORY', 5)}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-purple-50 text-purple-700 font-semibold border border-purple-200 hover:bg-purple-100 transition cursor-pointer"
-                >
-                  💼 Staff Salaries (₹3k)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyTemplate('TAX', '800', 'MANDATORY', 15)}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-rose-50 text-rose-700 font-semibold border border-rose-200 hover:bg-rose-100 transition cursor-pointer"
-                >
-                  🏛️ GST Due 20th (₹800)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyTemplate('RENT', '1500', 'MANDATORY', 8)}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-blue-50 text-blue-700 font-semibold border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
-                >
-                  🏢 Shop Rent (₹1.5k)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyTemplate('SUPPLIER', '2500', 'HIGH', 10)}
-                  className="px-2.5 py-1 text-xs rounded-lg bg-amber-50 text-amber-700 font-semibold border border-amber-200 hover:bg-amber-100 transition cursor-pointer"
-                >
-                  📦 Supplier Due (₹2.5k)
-                </button>
+            {/* Quick Presets (Only when adding new) */}
+            {!editingObligation && (
+              <div className="mb-4">
+                <span className="text-xs font-bold text-slate-600 block mb-1.5 uppercase tracking-wider">
+                  1-Click Presets:
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('PAYROLL', '3000', 'MANDATORY', 5)}
+                    className="px-2.5 py-1 text-xs rounded-lg bg-purple-50 text-purple-700 font-semibold border border-purple-200 hover:bg-purple-100 transition cursor-pointer"
+                  >
+                    💼 Staff Salaries (₹3k)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('TAX', '800', 'MANDATORY', 15)}
+                    className="px-2.5 py-1 text-xs rounded-lg bg-rose-50 text-rose-700 font-semibold border border-rose-200 hover:bg-rose-100 transition cursor-pointer"
+                  >
+                    🏛️ GST Due 20th (₹800)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('MARKETING', '2000', 'HIGH', 7)}
+                    className="px-2.5 py-1 text-xs rounded-lg bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
+                  >
+                    📣 Marketing Budget (₹2k)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('RENT', '1500', 'MANDATORY', 8)}
+                    className="px-2.5 py-1 text-xs rounded-lg bg-blue-50 text-blue-700 font-semibold border border-blue-200 hover:bg-blue-100 transition cursor-pointer"
+                  >
+                    🏢 Shop Rent (₹1.5k)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyTemplate('SUPPLIER', '2500', 'HIGH', 10)}
+                    className="px-2.5 py-1 text-xs rounded-lg bg-amber-50 text-amber-700 font-semibold border border-amber-200 hover:bg-amber-100 transition cursor-pointer"
+                  >
+                    📦 Supplier Due (₹2.5k)
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4 text-sm">
               <div>
@@ -274,6 +341,7 @@ export default function ObligationsTable({
                 >
                   <option value="PAYROLL">💼 Employee Salaries & Staff Payroll</option>
                   <option value="TAX">🏛️ GST, Advance Tax & Compliance</option>
+                  <option value="MARKETING">📣 Marketing & Ad Growth Budget</option>
                   <option value="RENT">🏢 Office / Shop / Warehouse Rent</option>
                   <option value="SUPPLIER">📦 Supplier / Raw Material Invoices</option>
                   <option value="LOAN">🏦 Bank Loan / Machinery EMI Lease</option>
@@ -346,7 +414,10 @@ export default function ObligationsTable({
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingObligation(null);
+                  }}
                   className="px-4 py-2 text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition cursor-pointer"
                 >
                   Cancel
@@ -357,7 +428,13 @@ export default function ObligationsTable({
                   className="px-5 py-2 text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-500/20 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>{submitting ? 'Saving...' : 'Save & Protect Runway'}</span>
+                  <span>
+                    {submitting
+                      ? 'Saving...'
+                      : editingObligation
+                      ? 'Save Changes & Recalculate'
+                      : 'Save & Protect Runway'}
+                  </span>
                 </button>
               </div>
             </form>

@@ -344,7 +344,19 @@ def test_create_and_delete_obligation_endpoint():
     obs = get_res.json()
     assert any(o["obligation_id"] == ob_id for o in obs)
 
-    # 3. Delete the obligation
+    # 3. Update the obligation (modify amount, category to MARKETING, change due date)
+    update_res = client.put(
+        f"/api/v1/merchants/{m_id}/obligations/{ob_id}",
+        json={"amount": 18500.0, "category": "MARKETING", "due_date": "2026-09-22", "priority": "HIGH"}
+    )
+    assert update_res.status_code == 200
+    up_data = update_res.json()
+    assert up_data["amount"] == 18500.0
+    assert up_data["category"] == "MARKETING"
+    assert up_data["due_date"] == "2026-09-22"
+    assert up_data["priority"] == "HIGH"
+
+    # 4. Delete the obligation
     del_res = client.delete(f"/api/v1/merchants/{m_id}/obligations/{ob_id}")
     assert del_res.status_code == 200
     assert del_res.json()["status"] == "SUCCESS"

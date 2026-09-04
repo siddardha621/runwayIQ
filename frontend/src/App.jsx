@@ -19,6 +19,7 @@ import {
   fetchAnomalies,
   fetchObligations,
   createObligation,
+  updateObligation,
   deleteObligation,
   simulateScenario,
   evaluateDecision,
@@ -158,6 +159,19 @@ export default function App() {
     }
   };
 
+  const handleUpdateObligation = async (obId, obData) => {
+    try {
+      setLoading(true);
+      await updateObligation(selectedMerchantId, obId, obData);
+      await loadMerchantData(selectedMerchantId);
+    } catch (err) {
+      console.error('Error updating obligation:', err);
+      alert(err.message || 'Failed to update bill');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeleteObligation = async (obId) => {
     try {
       setLoading(true);
@@ -258,6 +272,7 @@ export default function App() {
               <ObligationsTable
                 obligations={obligations}
                 onAddObligation={handleAddObligation}
+                onUpdateObligation={handleUpdateObligation}
                 onDeleteObligation={handleDeleteObligation}
               />
             </div>
@@ -286,6 +301,7 @@ export default function App() {
               <ObligationsTable
                 obligations={obligations}
                 onAddObligation={handleAddObligation}
+                onUpdateObligation={handleUpdateObligation}
                 onDeleteObligation={handleDeleteObligation}
               />
               <RiskRadar anomaliesData={anomalies} />

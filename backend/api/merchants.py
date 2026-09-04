@@ -15,6 +15,7 @@ from backend.api.schemas import (
     DataQualityResponse,
     ObligationResponse,
     CreateObligationRequest,
+    UpdateObligationRequest,
     LoginOrRegisterRequest,
     LoginResponse,
     ResetPasswordRequest,
@@ -200,6 +201,52 @@ def delete_obligation(merchant_id: str, obligation_id: str, db: Session = Depend
     db.delete(ob)
     db.commit()
     return {"status": "SUCCESS", "message": f"Obligation {obligation_id} removed."}
+
+
+@router.put("/{merchant_id}/obligations/{obligation_id}", response_model=ObligationResponse)
+def update_obligation(
+    merchant_id: str,
+    obligation_id: str,
+    request: UpdateObligationRequest,
+    db: Session = Depends(get_db)
+):
+    """Updates an existing scheduled obligation (amount, due date, category, priority, recurring)."""
+    ob = db.query(Obligation).filter(
+        Obligation.merchant_id == merchant_id,
+        Obligation.obligation_id == obligation_id
+    ).first()
+    if not ob:
+        raise HTTPException(status_code=404, detail="Obligation not found.")
+
+    if request.category is not None:
+        valid_categories = ["PAYROLL", "TAX", "RENT", "SUPPLIER", "LOAN", "INVENTORY", "UTILITIES", "MARKETING", "OTHER"]
+        ob.category = request.category.upper() if request.category.upper() in valid_categories else "OTHER"
+    if request.amount is not None:
+        ob.amount = round(float(request.amount), 2)
+    if request.due_date is not None:
+        ob.due_date = request.due_date
+    if request.priority is not None:
+        valid_priorities = ["MANDATORY", "HIGH", "MEDIUM", "DISCRETIONARY"]
+        ob.priority = request.priority.upper() if request.priority.upper() in valid_priorities else "MANDATORY"
+    if request.recurring is not None:
+        ob.recurring = request.recurring
+    if request.status is not None:
+        valid_statuses = ["UPCOMING", "PAID", "CANCELLED"]
+        ob.status = request.status.upper() if request.status.upper() in valid_statuses else "UPCOMING"
+
+    db.commit()
+    db.refresh(ob)
+
+    return {
+        "obligation_id": ob.obligation_id,
+        "due_date": ob.due_date,
+        "amount": ob.amount,
+        "category": ob.category,
+        "priority": ob.priority,
+        "status": ob.status,
+        "recurring": ob.recurring,
+        "risk_contribution_pct": 100.0,
+    }
 
 
 @router.post("/login-or-register", response_model=LoginResponse)

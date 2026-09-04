@@ -49,6 +49,19 @@ export async function createObligation(merchantId, data) {
   return res.json();
 }
 
+export async function updateObligation(merchantId, obligationId, data) {
+  const res = await fetch(`${BASE_URL}/merchants/${merchantId}/obligations/${obligationId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to update obligation');
+  }
+  return res.json();
+}
+
 export async function deleteObligation(merchantId, obligationId) {
   const res = await fetch(`${BASE_URL}/merchants/${merchantId}/obligations/${obligationId}`, {
     method: 'DELETE',
