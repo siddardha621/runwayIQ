@@ -157,8 +157,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0b0e] text-zinc-100 flex flex-col justify-between">
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-4 flex-1">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between">
+      <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-5 flex-1">
         
         {/* Header with 3 Simple Navigation Tabs & Store Selector */}
         <Header
@@ -174,7 +174,7 @@ export default function App() {
 
         {/* Error Alert Banner */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-sm">
+          <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-medium">
             <strong>Connection Notice:</strong> {error}
           </div>
         )}
@@ -263,10 +263,10 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
-        <p>Merchant Cash-Flow Decision Intelligence System • Razorpay Bangalore Internship Submission</p>
-        <p className="mt-1 text-[11px] text-slate-600">
-          Clean Fintech UI/UX • Asymmetric Risk Optimization • Zero Hallucination Guarantee
+      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+        <p className="font-medium text-slate-600">Razorpay Merchant Cash-Flow Decision Intelligence System</p>
+        <p className="mt-0.5 text-[11px] text-slate-400">
+          Enterprise Working Capital & Risk Optimization • Zero Hallucination Guarantee
         </p>
       </footer>
     </div>

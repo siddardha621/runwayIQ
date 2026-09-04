@@ -11,7 +11,7 @@ import {
   ReferenceLine,
   Legend,
 } from 'recharts';
-import { TrendingUp, Layers, Sliders, ShieldAlert } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 export default function ForecastChart({ historicalEntries = [], forecastPoints = [], scenarioTrajectory = [] }) {
   const [showInterval, setShowInterval] = useState(true);
@@ -68,19 +68,19 @@ export default function ForecastChart({ historicalEntries = [], forecastPoints =
     if (!active || !payload || !payload.length) return null;
 
     return (
-      <div className="bg-slate-950/95 border border-white/20 p-3.5 rounded-xl shadow-2xl text-xs backdrop-blur-xl ring-1 ring-white/10">
-        <div className="font-bold text-slate-200 border-b border-white/10 pb-1.5 mb-2">
+      <div className="bg-white border border-slate-200 p-3.5 rounded-xl shadow-lg text-xs">
+        <div className="font-bold text-slate-800 border-b border-slate-100 pb-1.5 mb-2">
           Date: {label}
         </div>
         {payload.map((entry, index) => {
           if (entry.value === null || entry.value === undefined) return null;
           return (
             <div key={`tooltip-${index}`} className="flex items-center justify-between gap-4 py-1">
-              <span className="flex items-center gap-1.5 font-medium" style={{ color: entry.color }}>
-                <span className="w-2.5 h-2.5 rounded-full shadow" style={{ backgroundColor: entry.color }}></span>
+              <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></span>
                 {entry.name}:
               </span>
-              <span className="font-mono font-bold text-white text-xs">
+              <span className="font-mono font-bold text-slate-900 text-xs">
                 ₹{Number(entry.value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
               </span>
             </div>
@@ -91,20 +91,20 @@ export default function ForecastChart({ historicalEntries = [], forecastPoints =
   };
 
   return (
-    <div className="fintech-card p-6 mb-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-white/10">
+    <div className="bg-white p-6 mb-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
               <TrendingUp className="w-4 h-4" />
             </div>
-            <h2 className="text-base font-black text-slate-100">30-Day Cash Trajectory & Safety Runway</h2>
-            <span className="px-2.5 py-0.5 text-[10px] font-black bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-full uppercase tracking-wider">
+            <h2 className="text-base font-bold text-slate-900">30-Day Working Capital & Cash Runway</h2>
+            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded-full uppercase tracking-wider">
               ML Multi-Step Forecast
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Solid blue line shows realized cash in your bank account; dashed indigo line projects your 30-day runway against your Safety Buffer.
+          <p className="text-xs text-slate-500 mt-1 font-medium">
+            Solid blue line shows historical bank balance; dashed indigo line projects runway against your Safety Buffer.
           </p>
         </div>
 
@@ -112,20 +112,20 @@ export default function ForecastChart({ historicalEntries = [], forecastPoints =
         <div className="flex items-center gap-2 text-xs">
           <button
             onClick={() => setShowInterval(!showInterval)}
-            className={`px-3 py-1.5 rounded-xl font-bold border transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-semibold border transition ${
               showInterval
-                ? 'bg-blue-600/20 border-blue-500/50 text-blue-300 shadow-sm'
-                : 'bg-slate-900 border-white/10 text-slate-500'
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'
             }`}
           >
             Uncertainty Band (85%)
           </button>
           <button
             onClick={() => setShowBuffer(!showBuffer)}
-            className={`px-3 py-1.5 rounded-xl font-bold border transition-all ${
+            className={`px-3 py-1.5 rounded-lg font-semibold border transition ${
               showBuffer
-                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm'
-                : 'bg-slate-900 border-white/10 text-slate-500'
+                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'
             }`}
           >
             Safety Buffer Line
@@ -137,15 +137,15 @@ export default function ForecastChart({ historicalEntries = [], forecastPoints =
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
             <defs>
-              <linearGradient id="intervalGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+              <linearGradient id="intervalGradLight" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
             <XAxis
               dataKey="date"
-              stroke="#64748b"
+              stroke="#94a3b8"
               fontSize={11}
               tickFormatter={(str) => {
                 const d = new Date(str);
@@ -153,7 +153,7 @@ export default function ForecastChart({ historicalEntries = [], forecastPoints =
               }}
               minTickGap={24}
             />
-            <YAxis stroke="#64748b" fontSize={11} tickFormatter={formatINR} />
+            <YAxis stroke="#94a3b8" fontSize={11} tickFormatter={formatINR} />
             <Tooltip content={<CustomTooltip />} />
             <Legend
               wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
@@ -166,39 +166,39 @@ export default function ForecastChart({ historicalEntries = [], forecastPoints =
                 type="monotone"
                 dataKey="upperBound"
                 stroke="transparent"
-                fill="url(#intervalGrad)"
+                fill="url(#intervalGradLight)"
                 name="85% Prediction Interval"
               />
             )}
 
-            {/* Historical Realized Cash (Vibrant Cyan Line) */}
+            {/* Historical Realized Cash */}
             <Line
               type="monotone"
               dataKey="historicalCash"
-              stroke="#38bdf8"
-              strokeWidth={3}
+              stroke="#0284c7"
+              strokeWidth={2.5}
               dot={false}
               name="Realized Cash in Bank"
             />
 
-            {/* Baseline Forecast Cash (Dashed Electric Indigo Line) */}
+            {/* Baseline Forecast Cash */}
             <Line
               type="monotone"
               dataKey="forecastCash"
-              stroke="#818cf8"
-              strokeWidth={3}
-              strokeDasharray="5 5"
+              stroke="#6366f1"
+              strokeWidth={2.5}
+              strokeDasharray="4 4"
               dot={false}
               name="Projected Runway"
             />
 
-            {/* Simulated Scenario Cash (Rose/Red Line when simulated) */}
+            {/* Simulated Scenario Cash */}
             {scenarioTrajectory.length > 0 && (
               <Line
                 type="monotone"
                 dataKey="scenarioCash"
-                stroke="#f43f5e"
-                strokeWidth={3}
+                stroke="#e11d48"
+                strokeWidth={2.5}
                 dot={false}
                 name="Stressed Scenario Curve"
               />
@@ -208,12 +208,12 @@ export default function ForecastChart({ historicalEntries = [], forecastPoints =
             {showBuffer && bufferVal > 0 && (
               <ReferenceLine
                 y={bufferVal}
-                stroke="#f59e0b"
-                strokeDasharray="4 4"
-                strokeWidth={2}
+                stroke="#d97706"
+                strokeDasharray="3 3"
+                strokeWidth={1.5}
                 label={{
                   value: `Safety Reserve: ₹${(bufferVal / 100000).toFixed(1)}L`,
-                  fill: '#fbbf24',
+                  fill: '#b45309',
                   fontSize: 11,
                   position: 'insideBottomRight',
                   fontWeight: 'bold',
