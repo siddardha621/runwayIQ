@@ -84,9 +84,12 @@ export async function fetchModelEvaluation() {
   return res.json();
 }
 
-export async function uploadStatement(merchantId, file) {
+export async function uploadStatement(merchantId, file, closingBalance = null) {
   const formData = new FormData();
   formData.append('file', file);
+  if (closingBalance !== null && closingBalance !== undefined && closingBalance !== '') {
+    formData.append('closing_balance', String(closingBalance));
+  }
   const res = await fetch(`${BASE_URL}/merchants/${merchantId}/upload-statement`, {
     method: 'POST',
     body: formData,

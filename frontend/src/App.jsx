@@ -165,6 +165,7 @@ export default function App() {
     setCurrentUser(user);
     if (user.merchant_id) {
       setSelectedMerchantId(user.merchant_id);
+      loadMerchantData(user.merchant_id);
     }
     localStorage.setItem('runwayiq_user', JSON.stringify(user));
   };

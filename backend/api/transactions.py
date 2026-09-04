@@ -1,5 +1,5 @@
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from backend.models.database import get_db
 from backend.models.transaction import Transaction
@@ -40,6 +40,7 @@ def get_merchant_transactions(
 async def upload_merchant_statement(
     merchant_id: str,
     file: UploadFile = File(...),
+    closing_balance: Optional[float] = Form(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -55,7 +56,9 @@ async def upload_merchant_statement(
 
     try:
         contents = await file.read()
-        result = IngestionService.ingest_statement(db, merchant_id, contents, filename=file.filename)
+        result = IngestionService.ingest_statement(
+            db, merchant_id, contents, filename=file.filename, manual_balance=closing_balance
+        )
         return result
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))

@@ -1,11 +1,40 @@
 import React, { useState } from 'react';
-import { Zap, ShieldCheck, ArrowRight, Lock, Mail, Store, Building2, CheckCircle2, ChevronRight } from 'lucide-react';
+import {
+  Zap,
+  ShieldCheck,
+  ArrowRight,
+  Lock,
+  Mail,
+  Store,
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Key,
+  X,
+  RefreshCw,
+} from 'lucide-react';
 
 export default function LoginPage({ onLoginSuccess, merchants = [] }) {
   const [email, setEmail] = useState('admin@urbancart.in');
-  const [password, setPassword] = useState('••••••••');
+  const [password, setPassword] = useState('admin123');
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState('merch_urbancart');
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+
+  // Forgot Password Modal State
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('admin@urbancart.in');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotStep, setForgotStep] = useState(1); // 1 = Request code, 2 = Enter code & new pass, 3 = Done
+  const [forgotError, setForgotError] = useState(null);
 
   // Preset merchant accounts
   const demoAccounts = [
@@ -51,24 +80,132 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
     },
   ];
 
+  // Retrieve custom saved passwords from localStorage or default to 'admin123'
+  const getExpectedPassword = (targetEmail) => {
+    try {
+      const savedMap = JSON.parse(localStorage.getItem('runwayiq_user_passwords') || '{}');
+      if (savedMap[targetEmail.toLowerCase()]) {
+        return savedMap[targetEmail.toLowerCase()];
+      }
+    } catch {
+      // fallback
+    }
+    return 'admin123';
+  };
+
   const handlePresetSelect = (acc) => {
     setSelectedPreset(acc.merchant_id);
     setEmail(acc.email);
+    setPassword(getExpectedPassword(acc.email));
+    setAuthError(null);
+    setSuccessMsg(null);
   };
 
   const handleLogin = (e) => {
     e.preventDefault();
+    setAuthError(null);
+    setSuccessMsg(null);
     setLoading(true);
+
     setTimeout(() => {
-      const activeAcc = demoAccounts.find((a) => a.merchant_id === selectedPreset) || demoAccounts[0];
+      const normalizedEmail = email.trim().toLowerCase();
+      const account = demoAccounts.find((a) => a.email.toLowerCase() === normalizedEmail);
+
+      if (!account) {
+        setAuthError(`No merchant account found for "${email}". Please select one of the demo stores on the left or use admin@urbancart.in.`);
+        setLoading(false);
+        return;
+      }
+
+      const expectedPass = getExpectedPassword(normalizedEmail);
+      if (password !== expectedPass) {
+        setAuthError(`Incorrect password. For this evaluation demo, the password is "${expectedPass}". If forgotten, click "Forgot key?" below to reset.`);
+        setLoading(false);
+        return;
+      }
+
+      // Valid Credentials: Authenticate User
       onLoginSuccess({
-        merchant_id: activeAcc.merchant_id,
-        business_name: activeAcc.business_name,
-        email: email,
+        merchant_id: account.merchant_id,
+        business_name: account.business_name,
+        email: account.email,
         role: 'Merchant Administrator',
       });
       setLoading(false);
-    }, 400);
+    }, 350);
+  };
+
+  // Forgot Password Handlers
+  const handleOpenForgot = () => {
+    setForgotEmail(email);
+    setForgotStep(1);
+    setForgotError(null);
+    setGeneratedCode(null);
+    setVerificationCode('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setIsForgotModalOpen(true);
+  };
+
+  const handleRequestCode = (e) => {
+    e.preventDefault();
+    setForgotError(null);
+    const normalized = forgotEmail.trim().toLowerCase();
+    const match = demoAccounts.find((a) => a.email.toLowerCase() === normalized);
+    if (!match) {
+      setForgotError(`No merchant account found for "${forgotEmail}". Please use a registered store email like admin@urbancart.in.`);
+      return;
+    }
+    // Generate simulated 6-digit OTP
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGeneratedCode(code);
+    setForgotStep(2);
+  };
+
+  const handleResetPassword = (e) => {
+    e.preventDefault();
+    setForgotError(null);
+
+    if (verificationCode.trim() !== generatedCode) {
+      setForgotError('Invalid verification code. Please check the code provided above or click "Auto-fill Code".');
+      return;
+    }
+    if (!newPassword || newPassword.length < 4) {
+      setForgotError('Password must be at least 4 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setForgotError('Passwords do not match. Please ensure both passwords are identical.');
+      return;
+    }
+
+    // Save new password to localStorage
+    try {
+      const savedMap = JSON.parse(localStorage.getItem('runwayiq_user_passwords') || '{}');
+      savedMap[forgotEmail.trim().toLowerCase()] = newPassword;
+      localStorage.setItem('runwayiq_user_passwords', JSON.stringify(savedMap));
+    } catch (err) {
+      console.error('Failed to save reset password:', err);
+    }
+
+    // Update login form
+    setEmail(forgotEmail);
+    setPassword(newPassword);
+    setIsForgotModalOpen(false);
+    setSuccessMsg(`Password for ${forgotEmail} has been updated to "${newPassword}"! You can now sign in.`);
+  };
+
+  const handleRestoreDefaultPassword = () => {
+    try {
+      const savedMap = JSON.parse(localStorage.getItem('runwayiq_user_passwords') || '{}');
+      delete savedMap[forgotEmail.trim().toLowerCase()];
+      localStorage.setItem('runwayiq_user_passwords', JSON.stringify(savedMap));
+    } catch {
+      // ignore
+    }
+    setPassword('admin123');
+    setIsForgotModalOpen(false);
+    setSuccessMsg('Default password ("admin123") restored! You can now sign in.');
   };
 
   return (
@@ -98,22 +235,24 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
 
       {/* Center Auth Card */}
       <div className="max-w-4xl mx-auto w-full my-8">
-        <div className="bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden grid grid-cols-1 md:grid-cols-12">
           
-          {/* Left Column: Quick 1-Click Demo Merchant Accounts */}
-          <div className="lg:col-span-7 p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-slate-100 bg-slate-50/50 flex flex-col justify-between">
+          {/* Left Panel: 1-Click Demo Profiles */}
+          <div className="md:col-span-6 p-6 sm:p-8 bg-slate-50/80 border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between">
             <div>
-              <div className="mb-5">
-                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">
-                  1-Click Sign In
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-2.5 py-1 text-xs font-bold rounded-md bg-blue-100 text-blue-800">
+                  Instant Demo Access
                 </span>
-                <h2 className="text-xl font-extrabold text-slate-900">
-                  Select a Merchant Profile to Launch
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
-                  Click any demo business below to log straight into its live cash runway dashboard:
-                </p>
+                <span className="text-xs text-slate-500 font-medium">Click any store</span>
               </div>
+              
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">
+                Select Merchant Profile
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 font-medium mb-5">
+                Switch between pre-loaded test profiles to evaluate real-time capital decisions:
+              </p>
 
               <div className="space-y-3">
                 {demoAccounts.map((acc) => {
@@ -122,30 +261,30 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                     <div
                       key={acc.merchant_id}
                       onClick={() => handlePresetSelect(acc)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                      className={`p-3.5 rounded-2xl border transition text-left cursor-pointer ${
                         isSelected
-                          ? 'bg-white border-blue-500 shadow-md shadow-blue-500/10 ring-2 ring-blue-500/20'
-                          : 'bg-white/80 border-slate-200 hover:border-slate-300 hover:bg-white'
+                          ? 'bg-blue-50/80 border-blue-500 shadow-sm ring-1 ring-blue-500/20'
+                          : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <Store className={`w-4.5 h-4.5 ${isSelected ? 'text-blue-600' : 'text-slate-500'}`} />
+                          <Store className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
                           <span className="font-bold text-sm text-slate-900">{acc.business_name}</span>
                         </div>
-                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${acc.tagColor}`}>
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${acc.tagColor}`}>
                           {acc.tag}
                         </span>
                       </div>
-                      <p className="text-xs text-slate-600 leading-snug font-medium mb-2">
+
+                      <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
+                        <span>{acc.business_type}</span>
+                        <span className="font-bold text-slate-800 font-mono">{acc.balance_str}</span>
+                      </div>
+                      
+                      <p className="text-[11px] text-slate-500 mt-1.5 leading-snug line-clamp-2">
                         {acc.description}
                       </p>
-                      <div className="flex items-center justify-between text-xs text-slate-500 font-medium pt-1.5 border-t border-slate-100">
-                        <span>Starting Bank Balance: <strong className="text-slate-900">{acc.balance_str}</strong></span>
-                        <span className="text-blue-600 font-bold flex items-center gap-0.5">
-                          {isSelected ? 'Selected' : 'Select'} <ChevronRight className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
                     </div>
                   );
                 })}
@@ -154,37 +293,57 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
 
             <div className="mt-6 pt-4 border-t border-slate-200 text-xs text-slate-500 font-medium flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-              <span>Includes live bank statements, multi-step ML forecasts & decision audits.</span>
+              <span>Full cashflow simulation, AI Copilot, and decision engine active.</span>
             </div>
           </div>
 
-          {/* Right Column: Sign In Form */}
-          <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between bg-white">
+          {/* Right Panel: Sign-In Form */}
+          <div className="md:col-span-6 p-6 sm:p-8 flex flex-col justify-between">
             <div>
-              <div className="mb-6">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  Workspace Authentication
+              <div className="mb-5">
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider block mb-1">
+                  Enterprise Portal
                 </span>
-                <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Sign In to RunwayIQ
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  Sign In to Dashboard
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
-                  Enter your credentials or use the selected profile.
+                <p className="text-xs text-slate-500 mt-1 font-medium">
+                  Enter merchant credentials to manage cashflow and evaluate spending commitments.
                 </p>
               </div>
+
+              {/* Success Notification */}
+              {successMsg && (
+                <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-start gap-2.5 text-xs font-semibold animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <span>{successMsg}</span>
+                </div>
+              )}
+
+              {/* Error Notification */}
+              {authError && (
+                <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 flex items-start gap-2.5 text-xs font-semibold animate-fadeIn">
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                  <span>{authError}</span>
+                </div>
+              )}
 
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Merchant Email Address
+                    Store Email Address
                   </label>
                   <div className="relative">
                     <Mail className="w-4.5 h-4.5 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                     <input
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setAuthError(null);
+                      }}
                       required
+                      placeholder="admin@urbancart.in"
                       className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                     />
                   </div>
@@ -192,17 +351,30 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Password
+                    Account Password
                   </label>
                   <div className="relative">
                     <Lock className="w-4.5 h-4.5 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setAuthError(null);
+                      }}
                       required
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+                      placeholder="••••••••"
+                      className={`w-full pl-10 pr-10 py-2.5 bg-slate-50 border rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition ${
+                        authError ? 'border-rose-400 bg-rose-50/30' : 'border-slate-300'
+                      }`}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                    </button>
                   </div>
                 </div>
 
@@ -211,16 +383,20 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                     <input type="checkbox" defaultChecked className="rounded text-blue-600 focus:ring-blue-500" />
                     <span>Remember my store</span>
                   </label>
-                  <span className="text-blue-600 font-semibold hover:underline cursor-pointer">
+                  <button
+                    type="button"
+                    onClick={handleOpenForgot}
+                    className="text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer transition"
+                  >
                     Forgot key?
-                  </span>
+                  </button>
                 </div>
 
                 <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-medium">
                   <span className="font-bold text-slate-800 block mb-0.5">Quick Demo Credentials:</span>
-                  <span>Email: <strong className="text-slate-900">admin@urbancart.in</strong></span>
+                  <span>Email: <strong className="text-slate-900">{email}</strong></span>
                   <span className="mx-1.5">•</span>
-                  <span>Password: <strong className="text-slate-900">admin123</strong></span>
+                  <span>Password: <strong className="text-slate-900">{getExpectedPassword(email)}</strong></span>
                 </div>
 
                 <button
@@ -228,8 +404,17 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                   disabled={loading}
                   className="w-full mt-2 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-sm sm:text-base rounded-xl shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <span>{loading ? 'Verifying Credentials...' : 'Sign In with Credentials'}</span>
-                  <ArrowRight className="w-4.5 h-4.5" />
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-4.5 h-4.5 animate-spin text-white" />
+                      <span>Authenticating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In with Credentials</span>
+                      <ArrowRight className="w-4.5 h-4.5" />
+                    </>
+                  )}
                 </button>
               </form>
             </div>
@@ -251,6 +436,161 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
       <div className="max-w-6xl mx-auto w-full text-center text-xs text-slate-500 font-medium">
         <span>© 2026 RunwayIQ Financial Technologies • Autonomous Cash-Flow Decision Engine</span>
       </div>
+
+      {/* Forgot Password / Account Recovery Modal */}
+      {isForgotModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-fadeIn">
+            
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">Reset Account Password</h4>
+                  <p className="text-xs text-slate-500">RunwayIQ merchant recovery service</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsForgotModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-sm">
+              {forgotError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                  <span>{forgotError}</span>
+                </div>
+              )}
+
+              {forgotStep === 1 && (
+                <form onSubmit={handleRequestCode} className="space-y-4">
+                  <p className="text-xs text-slate-600 font-medium">
+                    Enter your registered store email address to receive a secure recovery code:
+                  </p>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Store Email
+                    </label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      required
+                      placeholder="admin@urbancart.in"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="pt-2 flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={handleRestoreDefaultPassword}
+                      className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                    >
+                      Reset to Default (admin123)
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm"
+                    >
+                      Send Recovery Code
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {forgotStep === 2 && (
+                <form onSubmit={handleResetPassword} className="space-y-3.5">
+                  {/* Simulated Code Banner */}
+                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-slate-700 space-y-1.5">
+                    <div className="flex items-center justify-between font-bold text-blue-900">
+                      <span>Verification Code Sent!</span>
+                      <span className="font-mono bg-white px-2 py-0.5 rounded border border-blue-200 text-blue-800">
+                        {generatedCode}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Use code <strong>{generatedCode}</strong> to set your new store password.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationCode(generatedCode)}
+                      className="text-[11px] text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer"
+                    >
+                      Auto-fill code ({generatedCode})
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Enter 6-Digit Code
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      placeholder="e.g. 582910"
+                      required
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono font-bold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      required
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      required
+                      className="w-full px-3.5 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-900"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setForgotStep(1)}
+                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl transition cursor-pointer shadow-sm"
+                    >
+                      Save & Apply Password
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

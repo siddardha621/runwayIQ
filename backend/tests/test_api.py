@@ -169,3 +169,38 @@ def test_upload_excel_statement():
     assert data["outflows_added"] == 1
     assert data["closing_balance_extracted"] == 870000.0
 
+
+def test_upload_statement_with_hdfc_bank_format():
+    statement = (
+        b"Txn Date,Particulars,Withdrawal Amt.,Deposit Amt.,Closing Balance (INR)\n"
+        b"28-Aug-2026,UPI-SETTLEMENT-PAYOUT,0.0,95000.00,980000.00\n"
+        b"29-Aug-2026,SUPPLIER RAW MATERIALS,42000.00,0.0,938000.00\n"
+    )
+    response = client.post(
+        "/api/v1/merchants/merch_urbancart/upload-statement",
+        files={"file": ("hdfc_aug_statement.csv", statement, "text/csv")},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["rows_processed"] == 2
+    assert data["inflows_added"] == 1
+    assert data["outflows_added"] == 1
+    assert data["closing_balance_extracted"] == 938000.0
+    assert data["new_cash"] == 938000.0
+    assert len(data["preview_rows"]) == 2
+
+
+def test_upload_statement_with_manual_balance_override():
+    csv_data = b"Date,Description,Amount,Type\n2026-08-30,Retail Inflow,30000.0,INFLOW\n"
+    response = client.post(
+        "/api/v1/merchants/merch_urbancart/upload-statement",
+        files={"file": ("inflow_only.csv", csv_data, "text/csv")},
+        data={"closing_balance": "1050000.00"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["closing_balance_extracted"] == 1050000.0
+    assert data["new_cash"] == 1050000.0
+

@@ -20,48 +20,175 @@ from backend.core.exceptions import MerchantNotFoundError
 class IngestionService:
     @staticmethod
     def parse_amount(val: Any) -> float:
-        """Sanitizes strings like '₹1,50,000.00', '150000', '-500.5' into float."""
+        """Sanitizes strings like '₹1,50,000.00', '150000', '-500.5', '(200.00)', '8,85,000 Cr' into float."""
         if val is None:
             return 0.0
-        s = str(val).strip().replace("₹", "").replace("Rs.", "").replace("Rs", "").replace(",", "").replace(" ", "")
+        s = str(val).strip()
+        # Handle parentheses representing negative numbers: (500.00) -> -500.00
+        is_negative = False
+        if s.startswith("(") and s.endswith(")"):
+            is_negative = True
+            s = s[1:-1]
+        s = (
+            s.replace("₹", "")
+            .replace("Rs.", "")
+            .replace("Rs", "")
+            .replace("INR", "")
+            .replace("$", "")
+            .replace(",", "")
+            .replace(" ", "")
+        )
+        # Strip trailing Cr / Dr notations
+        s = re.sub(r"(?i)(?:cr|dr)$", "", s).strip()
         if not s:
             return 0.0
         try:
-            return float(s)
+            val_float = float(s)
+            return -val_float if is_negative else val_float
         except ValueError:
             return 0.0
 
     @staticmethod
     def parse_date(val: Any) -> date:
-        """Parses various date formats (YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD-Mon-YYYY)."""
+        """Parses various date formats (YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD-Mon-YYYY, etc.)."""
         if isinstance(val, (datetime, date)):
             return val if isinstance(val, date) else val.date()
         s = str(val).strip()
-        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d", "%d-%b-%Y", "%d/%m/%y", "%d-%m-%y"):
+        # Clean potential trailing times or extra spaces
+        if " " in s and len(s) > 11:
+            parts = s.split()
+            if len(parts) >= 2 and any(sep in parts[0] for sep in ("-", "/")):
+                s = parts[0]
+
+        date_formats = (
+            "%Y-%m-%d",
+            "%d/%m/%Y",
+            "%d-%m-%Y",
+            "%m/%d/%Y",
+            "%Y/%m/%d",
+            "%d-%b-%Y",
+            "%d-%B-%Y",
+            "%d %b %Y",
+            "%d %B %Y",
+            "%b %d, %Y",
+            "%B %d, %Y",
+            "%d/%m/%y",
+            "%d-%m-%y",
+            "%d.%m.%Y",
+            "%d.%m.%y",
+        )
+        for fmt in date_formats:
             try:
                 return datetime.strptime(s, fmt).date()
             except ValueError:
                 continue
+
+        # Regex fallback for embedded dates like "31-Aug-2026" or "31/08/2026"
+        d_match = re.search(r"(\d{1,2})[-/\.]([a-zA-Z]{3}|\d{1,2})[-/\.](\d{2,4})", s)
+        if d_match:
+            day, mon, yr = d_match.groups()
+            if len(yr) == 2:
+                yr = f"20{yr}"
+            for fmt in ("%d-%m-%Y", "%d-%b-%Y"):
+                try:
+                    return datetime.strptime(f"{day}-{mon}-{yr}", fmt).date()
+                except ValueError:
+                    pass
+
         return date.today()
 
     @classmethod
     def extract_closing_balance_from_text(cls, text: str) -> Optional[float]:
         """
-        Scans raw statement text for explicit closing / available balance lines.
-        Examples: 'Closing Balance: 8,85,000.00', 'Available Balance: ₹5,40,000'
+        Scans statement text across multiple Indian and international bank phrasing patterns.
+        Examples:
+        - 'Closing Balance: ₹8,85,000.00'
+        - 'Available Balance: 8,85,000.00'
+        - 'Clear Bal : Rs. 8,85,000.00'
+        - 'Balance as on 31/08/2026 : 8,85,000.00 Cr'
+        - 'Account Balance (INR) : 8,85,000.00'
+        - 'Ending Balance: 885000'
         """
-        pattern = re.compile(
-            r"(?:closing|available|book|net|account|current|ledger|total|clear)\s*balance\s*[:\-]?(?:\s*(?:inr|rs\.?|₹))?\s*([0-9,]+(?:\.[0-9]{1,2})?)",
-            re.IGNORECASE,
-        )
-        matches = pattern.findall(text)
-        if matches:
-            # Return the last detected closing balance occurrence
-            candidate = matches[-1]
-            amt = cls.parse_amount(candidate)
-            if amt > 0:
-                return amt
+        patterns = [
+            # Pattern 1: Keywords + optional "as of / on" + separator + optional currency + amount + optional Cr/Dr
+            re.compile(
+                r"(?:closing|available|book|net|account|current|ledger|total|clear|eff(?:ective)?|avail(?:able)?|ending|final)\s*(?:cash|fund|funds)?\s*(?:balance|bal\.?)(?:\s+as\s+(?:of|on|at)\s+[^:\n\r]{1,30})?\s*[:\-=]?\s*(?:inr|rs\.?|₹|\$)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:cr|dr)?",
+                re.IGNORECASE,
+            ),
+            # Pattern 2: "Balance as on / as of [date] : [amount]"
+            re.compile(
+                r"balance\s+as\s+(?:of|on|at)\s+[^:\n\r]{1,30}\s*[:\-=]?\s*(?:inr|rs\.?|₹|\$)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:cr|dr)?",
+                re.IGNORECASE,
+            ),
+            # Pattern 3: Currency + amount + "available balance / closing balance"
+            re.compile(
+                r"(?:inr|rs\.?|₹|\$)\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:cr)?\s*(?:\([a-z\s]+\))?\s*(?:available|closing|net|clear)\s*balance",
+                re.IGNORECASE,
+            ),
+        ]
+
+        for pat in patterns:
+            matches = pat.findall(text)
+            if matches:
+                # Iterate in reverse to get the final closing balance
+                for candidate in reversed(matches):
+                    amt = cls.parse_amount(candidate)
+                    if amt > 0:
+                        return amt
+
         return None
+
+    @classmethod
+    def _normalize_header(cls, header: str) -> str:
+        """Normalizes header string for fuzzy matching (e.g. 'Closing Balance (INR)' -> 'closing balance')."""
+        s = str(header).strip().lower().replace("_", " ").replace("-", " ")
+        s = re.sub(r"[^a-z0-9 ]", "", s).strip()
+        return s
+
+    @classmethod
+    def _map_columns(cls, raw_headers: List[str]) -> Dict[str, str]:
+        """
+        Maps arbitrary bank statement headers into standard keys:
+        'date', 'description', 'credit', 'debit', 'balance', 'amount', 'type'
+        """
+        mapping = {}
+        for raw in raw_headers:
+            norm = cls._normalize_header(raw)
+            if not norm:
+                continue
+
+            # Balance mapping
+            if any(k in norm for k in ("closing balance", "closing bal", "available balance", "avail bal", "running balance", "clear balance", "book balance", "net balance", "balance", "bal")) and not any(k in norm for k in ("opening", "open bal", "type")):
+                if "balance" not in mapping:
+                    mapping["balance"] = raw
+
+            # Credit / Inflow mapping
+            elif any(k in norm for k in ("credit", "deposit", "inflow", "cr amount", "amount credited", "received")) or norm == "cr":
+                if "credit" not in mapping:
+                    mapping["credit"] = raw
+
+            # Debit / Outflow mapping
+            elif any(k in norm for k in ("debit", "withdrawal", "outflow", "dr amount", "amount debited", "paid", "spent", "payments")) or norm == "dr":
+                if "debit" not in mapping:
+                    mapping["debit"] = raw
+
+            # Date mapping
+            elif any(k in norm for k in ("txn date", "transaction date", "value date", "post date", "booking date", "date", "time")) and "date" not in mapping:
+                mapping["date"] = raw
+
+            # Description mapping
+            elif any(k in norm for k in ("narration", "particulars", "description", "remarks", "details", "desc", "payee", "note")) and "description" not in mapping:
+                mapping["description"] = raw
+
+            # Amount mapping (when credit and debit are not split)
+            elif any(k in norm for k in ("amount", "txn amount", "gross amount", "net amount", "val")) and "amount" not in mapping:
+                mapping["amount"] = raw
+
+            # Type mapping (INFLOW/OUTFLOW, CR/DR)
+            elif any(k in norm for k in ("type", "txn type", "transaction type", "dr/cr", "cr/dr", "indicator")) and "type" not in mapping:
+                mapping["type"] = raw
+
+        return mapping
 
     @classmethod
     def ingest_statement(
@@ -69,7 +196,8 @@ class IngestionService:
         db: Session,
         merchant_id: str,
         file_contents: bytes,
-        filename: str = "statement.csv"
+        filename: str = "statement.csv",
+        manual_balance: Optional[float] = None,
     ) -> Dict[str, Any]:
         """
         Dispatches statement parsing based on file extension (.csv, .xlsx, .pdf, .txt),
@@ -96,25 +224,35 @@ class IngestionService:
                 if not all_rows:
                     raise ValueError("Excel file is empty.")
 
-                # Locate header row (first row with at least 2 non-empty cells)
+                # Locate header row: row containing at least 2 financial keywords
                 header_idx = 0
+                keywords = ("date", "description", "narration", "credit", "debit", "deposit", "withdrawal", "balance", "amount", "particulars", "remarks")
                 for idx, r in enumerate(all_rows):
-                    non_empty = [c for c in r if c is not None and str(c).strip()]
-                    if len(non_empty) >= 2:
+                    row_str = " ".join([str(c).lower() for c in r if c is not None])
+                    matched_kw = sum(1 for kw in keywords if kw in row_str)
+                    if matched_kw >= 2:
                         header_idx = idx
                         break
 
-                headers = [str(c).strip().lower() if c is not None else f"col_{i}" for i, c in enumerate(all_rows[header_idx])]
+                raw_headers = [str(c).strip() if c is not None else f"col_{i}" for i, c in enumerate(all_rows[header_idx])]
+                col_map = cls._map_columns(raw_headers)
 
                 for r in all_rows[header_idx + 1:]:
                     if not any(r):
                         continue
                     row_dict = {}
-                    for col_name, cell_val in zip(headers, r):
-                        if cell_val is not None:
-                            row_dict[col_name] = str(cell_val).strip()
-                    if row_dict:
-                        rows_data.append(row_dict)
+                    for i, cell_val in enumerate(r):
+                        if i < len(raw_headers) and cell_val is not None:
+                            row_dict[raw_headers[i]] = str(cell_val).strip()
+
+                    # Standardize into canonical keys
+                    canonical_row = {}
+                    for canon_key, orig_col in col_map.items():
+                        if orig_col in row_dict:
+                            canonical_row[canon_key] = row_dict[orig_col]
+
+                    if canonical_row:
+                        rows_data.append(canonical_row)
 
             except Exception as e:
                 raise ValueError(f"Failed to parse Excel statement: {str(e)}")
@@ -134,27 +272,53 @@ class IngestionService:
                 extracted_balance = cls.extract_closing_balance_from_text(pdf_text)
 
                 # Parse tabular lines from PDF text
-                # Standard line pattern: Date (DD/MM/YYYY or YYYY-MM-DD) Description ... Amount / Credit / Debit
                 lines = [l.strip() for l in pdf_text.splitlines() if l.strip()]
                 for line in lines:
-                    # Look for date at the start
-                    date_match = re.match(r"^(\d{1,4}[-/\.]\d{1,2}[-/\.]\d{2,4})", line)
+                    # Match date anywhere within first 35 chars (handles serial numbers like "1 31/08/2026")
+                    date_match = re.search(
+                        r"(?:^|[\s\b])(\d{1,4}[-/\.]\d{1,2}[-/\.]\d{2,4}|\d{1,2}[-\s/](?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-\s/]\d{2,4}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{2,4})",
+                        line[:35],
+                        re.IGNORECASE,
+                    )
                     if date_match:
-                        date_str = date_match.group(1)
+                        date_str = date_match.group(1).strip()
                         # Extract all numbers from line
-                        numbers = re.findall(r"(?:₹|Rs\.?)?\s*([0-9,]+\.[0-9]{2})", line)
-                        if numbers:
-                            # If multiple numbers: usually [Withdrawal/Debit, Deposit/Credit, Balance]
-                            amounts = [cls.parse_amount(n) for n in numbers if cls.parse_amount(n) > 0]
-                            desc = line[len(date_str):].strip()
-                            if amounts:
-                                if "cr" in line.lower() or "deposit" in line.lower() or "payout" in line.lower() or "settlement" in line.lower():
-                                    rows_data.append({"date": date_str, "description": desc, "credit": amounts[0]})
-                                elif "dr" in line.lower() or "withdraw" in line.lower() or "debit" in line.lower() or "transfer" in line.lower():
-                                    rows_data.append({"date": date_str, "description": desc, "debit": amounts[0]})
+                        numbers = re.findall(
+                            r"(?:₹|Rs\.?|INR|\$)?\s*([0-9]{1,3}(?:,[0-9]{2,3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)",
+                            line,
+                        )
+                        amounts = [cls.parse_amount(n) for n in numbers if cls.parse_amount(n) > 0]
+                        desc = line[date_match.end():].strip()
+
+                        if amounts:
+                            # 3 amounts: [Debit, Credit, Balance] or [RefNo, Amount, Balance]
+                            if len(amounts) >= 3:
+                                extracted_balance = amounts[-1]
+                                debit_val = amounts[0] if amounts[0] < amounts[-1] else 0.0
+                                credit_val = amounts[1] if amounts[1] < amounts[-1] else 0.0
+                                if "cr" in line.lower() or "deposit" in line.lower() or "payout" in line.lower():
+                                    rows_data.append({"date": date_str, "description": desc, "credit": credit_val or amounts[0], "balance": str(extracted_balance)})
                                 else:
-                                    # Fallback: assume inflow if positive
-                                    rows_data.append({"date": date_str, "description": desc, "amount": amounts[0], "type": "INFLOW"})
+                                    rows_data.append({"date": date_str, "description": desc, "debit": debit_val or amounts[0], "balance": str(extracted_balance)})
+
+                            # 2 amounts: usually [Amount, Running Balance]
+                            elif len(amounts) == 2:
+                                extracted_balance = amounts[1]
+                                amt = amounts[0]
+                                is_inflow = any(x in line.lower() for x in ("cr", "credit", "deposit", "payout", "settlement", "inflow", "received"))
+                                if is_inflow:
+                                    rows_data.append({"date": date_str, "description": desc, "credit": amt, "balance": str(extracted_balance)})
+                                else:
+                                    rows_data.append({"date": date_str, "description": desc, "debit": amt, "balance": str(extracted_balance)})
+
+                            # 1 amount
+                            elif len(amounts) == 1:
+                                amt = amounts[0]
+                                is_inflow = any(x in line.lower() for x in ("cr", "credit", "deposit", "payout", "settlement", "inflow", "received"))
+                                if is_inflow:
+                                    rows_data.append({"date": date_str, "description": desc, "credit": amt})
+                                else:
+                                    rows_data.append({"date": date_str, "description": desc, "debit": amt})
 
             except Exception as e:
                 raise ValueError(f"Failed to parse PDF statement: {str(e)}")
@@ -166,37 +330,72 @@ class IngestionService:
             extracted_balance = cls.extract_closing_balance_from_text(decoded_text)
 
             text_stream = io.StringIO(decoded_text)
-            reader = csv.DictReader(text_stream)
+            reader = csv.reader(text_stream)
+            all_lines = list(reader)
 
-            if reader.fieldnames:
-                for row in reader:
-                    cleaned_row = {k.strip().lower(): (v.strip() if v else "") for k, v in row.items() if k}
-                    if any(cleaned_row.values()):
-                        rows_data.append(cleaned_row)
+            if all_lines:
+                # Find header row
+                header_idx = 0
+                keywords = ("date", "description", "narration", "credit", "debit", "deposit", "withdrawal", "balance", "amount", "particulars")
+                for idx, r in enumerate(all_lines):
+                    line_str = " ".join([c.lower() for c in r])
+                    if sum(1 for kw in keywords if kw in line_str) >= 2:
+                        header_idx = idx
+                        break
 
+                raw_headers = all_lines[header_idx]
+                col_map = cls._map_columns(raw_headers)
+
+                for r in all_lines[header_idx + 1:]:
+                    if not any(r):
+                        continue
+                    row_dict = {raw_headers[i]: r[i].strip() for i in range(min(len(raw_headers), len(r)))}
+                    canonical_row = {}
+                    for canon_key, orig_col in col_map.items():
+                        if orig_col in row_dict:
+                            canonical_row[canon_key] = row_dict[orig_col]
+
+                    if canonical_row:
+                        rows_data.append(canonical_row)
+
+        # Fallback balance extraction from raw text if not yet found
+        if extracted_balance is None and raw_text_for_summary:
+            extracted_balance = cls.extract_closing_balance_from_text(raw_text_for_summary)
+
+        # Allow user-provided manual balance override
+        final_balance = None
+        if manual_balance is not None and float(manual_balance) > 0:
+            final_balance = round(float(manual_balance), 2)
+        elif extracted_balance is not None and float(extracted_balance) > 0:
+            final_balance = round(float(extracted_balance), 2)
+
+        # Capture old cash ledger state
+        from backend.services.cashflow_service import CashflowService
+        ledger_before = CashflowService.get_merchant_ledger(db, merchant_id)
+        old_cash = ledger_before["current_balance"]
+
+        # If no rows extracted but a balance is identified, directly sync the balance!
         if not rows_data:
-            # If no tabular rows were extracted but an explicit closing balance was found in PDF/text
-            if extracted_balance and extracted_balance > 0:
-                from backend.services.cashflow_service import CashflowService
-                ledger = CashflowService.get_merchant_ledger(db, merchant_id)
-                old_cash = ledger["current_balance"]
-                delta = extracted_balance - old_cash
+            if final_balance is not None and final_balance > 0:
+                delta = final_balance - old_cash
                 merchant.starting_balance = round(float(merchant.starting_balance) + delta, 2)
                 db.commit()
                 return {
                     "success": True,
                     "merchant_id": merchant_id,
+                    "filename": filename,
                     "rows_processed": 0,
                     "inflows_added": 0,
                     "outflows_added": 0,
                     "total_inflow_amount": 0.0,
                     "total_outflow_amount": 0.0,
-                    "closing_balance_extracted": extracted_balance,
+                    "closing_balance_extracted": final_balance,
                     "previous_cash": old_cash,
-                    "new_cash": extracted_balance,
-                    "message": f"Successfully parsed statement. Extracted closing bank balance of ₹{extracted_balance:,.2f}. Updated current available cash from ₹{old_cash:,.2f} to ₹{extracted_balance:,.2f}.",
+                    "new_cash": final_balance,
+                    "preview_rows": [],
+                    "message": f"Successfully parsed {filename}. Extracted closing bank balance of ₹{final_balance:,.2f}. Updated live bank cash from ₹{old_cash:,.2f} to ₹{final_balance:,.2f}.",
                 }
-            raise ValueError("No transaction entries could be extracted from the file. Please check file format.")
+            raise ValueError("No transaction entries or bank balance could be extracted from this file. Please verify file format or enter the closing balance.")
 
         # Process Extracted Rows into Database
         rows_processed = 0
@@ -204,107 +403,102 @@ class IngestionService:
         outflows_added = 0
         total_inflow_amt = 0.0
         total_outflow_amt = 0.0
+        preview_rows = []
 
         for r in rows_data:
             rows_processed += 1
 
-            # Check for running balance column
-            for bal_key in ("balance", "closing balance", "running balance", "net balance"):
-                if bal_key in r and r[bal_key]:
-                    val = cls.parse_amount(r[bal_key])
-                    if val > 0:
-                        extracted_balance = val  # keep updating to latest row balance
+            # Update running balance if column is present in row
+            if "balance" in r and r["balance"]:
+                row_bal = cls.parse_amount(r["balance"])
+                if row_bal > 0 and manual_balance is None:
+                    final_balance = round(row_bal, 2)
 
-            # Strategy 1: Separate Credit and Debit columns
-            if "credit" in r or "debit" in r:
-                row_date = cls.parse_date(r.get("date", date.today()))
-                credit_amt = cls.parse_amount(r.get("credit", 0))
-                debit_amt = cls.parse_amount(r.get("debit", 0))
-                desc = r.get("description", r.get("narration", r.get("particulars", "Bank Statement Entry")))
+            desc = r.get("description", "Bank Statement Entry")
+            row_date = cls.parse_date(r.get("date", date.today()))
 
-                if credit_amt > 0:
-                    settle = Settlement(
-                        settlement_id=f"stl_imp_{uuid.uuid4().hex[:10]}",
-                        merchant_id=merchant_id,
-                        source_transaction_date=row_date - timedelta(days=2),
-                        settlement_date=row_date,
-                        gross_amount=credit_amt,
-                        fees=round(credit_amt * 0.02, 2),
-                        taxes=round(credit_amt * 0.02 * 0.18, 2),
-                        adjustments=0.0,
-                        net_amount=credit_amt,
-                        status="SETTLED",
-                    )
-                    db.add(settle)
-                    inflows_added += 1
-                    total_inflow_amt += credit_amt
+            # Check for Credit vs Debit
+            credit_amt = cls.parse_amount(r.get("credit", 0))
+            debit_amt = cls.parse_amount(r.get("debit", 0))
 
-                if debit_amt > 0:
-                    exp = Expense(
-                        expense_id=f"exp_imp_{uuid.uuid4().hex[:10]}",
-                        merchant_id=merchant_id,
-                        date=row_date,
-                        category="SUPPLIER" if "supp" in str(desc).lower() else "OTHER",
-                        amount=debit_amt,
-                        recurring=False,
-                        priority="HIGH",
-                    )
-                    db.add(exp)
-                    outflows_added += 1
-                    total_outflow_amt += debit_amt
-
-            # Strategy 2: Amount + Type
-            elif "amount" in r:
-                row_date = cls.parse_date(r.get("date", r.get("settlement_date", date.today())))
+            if credit_amt == 0 and debit_amt == 0 and "amount" in r:
                 amt = cls.parse_amount(r.get("amount", 0))
-                row_type = str(r.get("type", r.get("transaction_type", "INFLOW"))).upper()
-                desc = r.get("description", r.get("category", "Imported Entry"))
-
-                if any(x in row_type for x in ("INFLOW", "CREDIT", "SETTLEMENT", "DEPOSIT", "CR")):
-                    settle = Settlement(
-                        settlement_id=f"stl_imp_{uuid.uuid4().hex[:10]}",
-                        merchant_id=merchant_id,
-                        source_transaction_date=row_date - timedelta(days=2),
-                        settlement_date=row_date,
-                        gross_amount=amt,
-                        fees=round(amt * 0.02, 2),
-                        taxes=round(amt * 0.02 * 0.18, 2),
-                        adjustments=0.0,
-                        net_amount=amt,
-                        status="SETTLED",
-                    )
-                    db.add(settle)
-                    inflows_added += 1
-                    total_inflow_amt += amt
+                row_type = str(r.get("type", "")).upper()
+                if any(x in row_type for x in ("INFLOW", "CREDIT", "CR", "DEPOSIT", "SETTLEMENT")):
+                    credit_amt = abs(amt)
+                elif any(x in row_type for x in ("OUTFLOW", "DEBIT", "DR", "WITHDRAWAL", "EXPENSE")):
+                    debit_amt = abs(amt)
+                elif amt > 0:
+                    credit_amt = amt
                 else:
-                    exp = Expense(
-                        expense_id=f"exp_imp_{uuid.uuid4().hex[:10]}",
-                        merchant_id=merchant_id,
-                        date=row_date,
-                        category="SUPPLIER" if "supp" in str(desc).lower() else "OTHER",
-                        amount=abs(amt),
-                        recurring=False,
-                        priority="HIGH",
-                    )
-                    db.add(exp)
-                    outflows_added += 1
-                    total_outflow_amt += abs(amt)
+                    debit_amt = abs(amt)
 
-        # Synchronize merchant bank cash balance if closing balance was extracted
-        from backend.services.cashflow_service import CashflowService
-        ledger_before = CashflowService.get_merchant_ledger(db, merchant_id)
-        old_cash = ledger_before["current_balance"]
-        new_cash = old_cash
+            # Record Inflows
+            if credit_amt > 0:
+                settle = Settlement(
+                    settlement_id=f"stl_imp_{uuid.uuid4().hex[:10]}",
+                    merchant_id=merchant_id,
+                    source_transaction_date=row_date - timedelta(days=2),
+                    settlement_date=row_date,
+                    gross_amount=credit_amt,
+                    fees=round(credit_amt * 0.02, 2),
+                    taxes=round(credit_amt * 0.02 * 0.18, 2),
+                    adjustments=0.0,
+                    net_amount=credit_amt,
+                    status="SETTLED",
+                )
+                db.add(settle)
+                inflows_added += 1
+                total_inflow_amt += credit_amt
+                if len(preview_rows) < 5:
+                    preview_rows.append({
+                        "date": str(row_date),
+                        "description": desc,
+                        "type": "CREDIT",
+                        "amount": credit_amt,
+                        "balance": final_balance,
+                    })
 
-        if extracted_balance is not None and extracted_balance > 0:
-            # Reconcile starting balance so the ledger ending cash matches extracted bank balance
-            delta = extracted_balance - (old_cash + total_inflow_amt - total_outflow_amt)
-            merchant.starting_balance = round(float(merchant.starting_balance) + delta, 2)
-            new_cash = extracted_balance
+            # Record Outflows
+            if debit_amt > 0:
+                exp = Expense(
+                    expense_id=f"exp_imp_{uuid.uuid4().hex[:10]}",
+                    merchant_id=merchant_id,
+                    date=row_date,
+                    category="SUPPLIER" if "supp" in str(desc).lower() else "OTHER",
+                    amount=debit_amt,
+                    recurring=False,
+                    priority="HIGH",
+                )
+                db.add(exp)
+                outflows_added += 1
+                total_outflow_amt += debit_amt
+                if len(preview_rows) < 5:
+                    preview_rows.append({
+                        "date": str(row_date),
+                        "description": desc,
+                        "type": "DEBIT",
+                        "amount": debit_amt,
+                        "balance": final_balance,
+                    })
 
+        # Commit ingested transactions to SQLite
         db.commit()
 
-        balance_msg = f" Bank closing balance synchronized to ₹{new_cash:,.2f}." if extracted_balance else ""
+        # Synchronize merchant bank cash balance to the verified closing balance
+        new_cash = old_cash
+        if final_balance is not None and final_balance > 0:
+            current_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
+            delta = final_balance - current_ledger["current_balance"]
+            merchant.starting_balance = round(float(merchant.starting_balance) + delta, 2)
+            db.commit()
+            reconciled_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
+            new_cash = reconciled_ledger["current_balance"]
+        else:
+            current_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
+            new_cash = current_ledger["current_balance"]
+
+        balance_msg = f" Bank closing balance synchronized to ₹{new_cash:,.2f}." if final_balance else ""
 
         return {
             "success": True,
@@ -313,12 +507,13 @@ class IngestionService:
             "rows_processed": rows_processed,
             "inflows_added": inflows_added,
             "outflows_added": outflows_added,
-            "total_inflow_amount": total_inflow_amt,
-            "total_outflow_amount": total_outflow_amt,
-            "closing_balance_extracted": extracted_balance,
+            "total_inflow_amount": round(total_inflow_amt, 2),
+            "total_outflow_amount": round(total_outflow_amt, 2),
+            "closing_balance_extracted": final_balance,
             "previous_cash": old_cash,
             "new_cash": new_cash,
-            "message": f"Successfully ingested {rows_processed} entries ({filename}): +{inflows_added} settlements (₹{total_inflow_amt:,.2f}), -{outflows_added} expenses (₹{total_outflow_amt:,.2f}).{balance_msg} Ledger and buffers recalculated.",
+            "preview_rows": preview_rows,
+            "message": f"Successfully ingested {rows_processed} entries ({filename}): +{inflows_added} credits (₹{total_inflow_amt:,.2f}), -{outflows_added} debits (₹{total_outflow_amt:,.2f}).{balance_msg} Live ledger recalculated.",
         }
 
     # Backward compatibility wrapper
