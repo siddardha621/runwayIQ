@@ -63,9 +63,22 @@ def get_merchant_summary(merchant_id: str, db: Session = Depends(get_db)):
     projected_date = forecast["projected_min_cash_date"]
     confidence = forecast["confidence"]
 
+    # Clean institutional rounding helper for KPI estimates
+    def _clean_round_kpi(val: float) -> float:
+        if val <= 0:
+            return 0.0
+        if val < 500:
+            return float(round(round(val / 10.0) * 10.0))
+        elif val < 5000:
+            return float(round(round(val / 50.0) * 50.0))
+        elif val < 50000:
+            return float(round(round(val / 100.0) * 100.0))
+        else:
+            return float(round(round(val / 500.0) * 500.0))
+
     # Sum 30-day expected inflows and outflows
-    exp_inflows = sum(p["predicted_inflow"] for p in forecast["points"])
-    exp_outflows = sum(p["predicted_outflow"] for p in forecast["points"])
+    exp_inflows = _clean_round_kpi(sum(p["predicted_inflow"] for p in forecast["points"]))
+    exp_outflows = _clean_round_kpi(sum(p["predicted_outflow"] for p in forecast["points"]))
 
     # Anomalies
     anomaly_data = AnomalyService.get_merchant_anomalies(db, merchant_id, as_of_date=ref_date)

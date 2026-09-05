@@ -79,19 +79,44 @@ class DynamicBufferEngine:
 
         # Effective minimum operating cash (respecting merchant's scale)
         if current_balance is not None and float(current_balance) > 0 and configured_floor > float(current_balance):
-            adapted_floor = round(max(300.0, float(current_balance) * 0.35), 2)
+            adapted_floor = max(300.0, float(current_balance) * 0.35)
         else:
             adapted_floor = configured_floor
 
-        effective_buffer = round(max(adapted_floor, dynamic_calculated), 2)
+        # Baseline calculation
+        raw_buffer = max(adapted_floor, dynamic_calculated)
 
-        # Sanity check: If obligations are small, buffer should leave workable runway
-        if current_balance is not None and float(current_balance) > 0 and near_term_obligations <= float(current_balance):
-            effective_buffer = round(min(effective_buffer, max(near_term_obligations, float(current_balance) * 0.60)), 2)
+        # Capital-Proportional Safety Limit:
+        # Buffer must leave workable liquidity for the business, unless upcoming bills alone exceed cash
+        if current_balance is not None and float(current_balance) > 0:
+            bal = float(current_balance)
+            if near_term_obligations < bal:
+                # Obligations are strictly protected; operating cushion takes a rational share of remaining liquid cash
+                remaining_liquid = bal - near_term_obligations
+                burn_cushion = min(burn_buffer + volatility_buffer + refund_reserve, max(150.0, remaining_liquid * 0.55))
+                raw_buffer = min(raw_buffer, near_term_obligations + burn_cushion)
+            else:
+                # Mandatory obligations already exceed or match total cash
+                raw_buffer = near_term_obligations
+
+        # Clean, institutional rounding (eliminates awkward odd decimals)
+        def _clean_round(val: float) -> float:
+            if val <= 0:
+                return 0.0
+            if val < 5000:
+                return round(round(val / 50.0) * 50.0, 2)
+            elif val < 50000:
+                return round(round(val / 100.0) * 100.0, 2)
+            elif val < 500000:
+                return round(round(val / 500.0) * 500.0, 2)
+            else:
+                return round(round(val / 1000.0) * 1000.0, 2)
+
+        effective_buffer = _clean_round(raw_buffer)
 
         return {
             "effective_buffer": effective_buffer,
-            "configured_floor": round(adapted_floor, 2),
+            "configured_floor": _clean_round(adapted_floor),
             "near_term_obligations": round(near_term_obligations, 2),
             "burn_buffer": round(burn_buffer, 2),
             "volatility_buffer": round(volatility_buffer, 2),
@@ -106,3 +131,4 @@ class DynamicBufferEngine:
                 f"Refund Reserve (₹{refund_reserve:,.0f})"
             ),
         }
+

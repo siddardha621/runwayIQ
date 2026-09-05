@@ -124,9 +124,18 @@ export default function KpiRibbon({ summary, onOpenDataQuality }) {
           <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight my-1.5">
             {formatINR(summary.minimum_operating_cash)}
           </div>
-          <p className="text-xs sm:text-sm text-amber-900/90 font-medium mt-1">
-            Locked for payroll, taxes & fixed bills
-          </p>
+          <div className="text-xs text-amber-900 font-medium mt-1 flex flex-col gap-0.5">
+            <span>
+              {summary.pending_obligations_total > 0
+                ? `Protects ${formatINR(summary.pending_obligations_total)} bills + runway cushion`
+                : 'Locked for payroll, taxes & fixed bills'}
+            </span>
+            <span className="text-[11px] text-amber-800/80 font-normal">
+              {summary.current_cash && summary.current_cash > summary.minimum_operating_cash
+                ? `Safe free cash: ${formatINR(summary.current_cash - summary.minimum_operating_cash)}`
+                : 'Capital caution: reserve active'}
+            </span>
+          </div>
         </div>
 
         {/* 3. Expected Money In (Soft Classic Sky Blue) */}
@@ -140,9 +149,14 @@ export default function KpiRibbon({ summary, onOpenDataQuality }) {
           <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight my-1.5">
             {formatINR(summary.expected_inflows_30d)}
           </div>
-          <p className="text-xs sm:text-sm text-sky-900/90 font-medium mt-1">
-            From projected customer settlements
-          </p>
+          <div className="text-xs text-sky-900 font-medium mt-1 flex flex-col gap-0.5">
+            <span>From customer sales & settlements</span>
+            <span className="text-[11px] text-sky-800/80 font-normal">
+              {summary.expected_inflows_30d < 1000
+                ? 'Based on recent low-frequency statement credits'
+                : 'Projected 30-day settlement runway'}
+            </span>
+          </div>
         </div>
 
         {/* 4. Upcoming Bills & Expenses (Soft Classic Rose Coral) */}
@@ -156,9 +170,14 @@ export default function KpiRibbon({ summary, onOpenDataQuality }) {
           <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight my-1.5">
             {formatINR(summary.pending_obligations_total || summary.expected_outflows_30d)}
           </div>
-          <p className="text-xs sm:text-sm text-rose-900/90 font-medium mt-1">
-            Mandatory supplier & tax payables
-          </p>
+          <div className="text-xs text-rose-900 font-medium mt-1 flex flex-col gap-0.5">
+            <span>Mandatory supplier & tax payables</span>
+            <span className="text-[11px] text-rose-800/80 font-normal">
+              {summary.pending_obligations_total > 0
+                ? 'Scheduled commitments due in next 30 days'
+                : 'No pending statutory obligations'}
+            </span>
+          </div>
         </div>
 
       </div>
