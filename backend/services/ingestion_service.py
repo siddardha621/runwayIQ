@@ -458,6 +458,7 @@ class IngestionService:
             if final_balance is not None and final_balance > 0:
                 delta = final_balance - old_cash
                 merchant.starting_balance = round(float(merchant.starting_balance) + delta, 2)
+                merchant.minimum_operating_cash = round(max(300.0, final_balance * 0.35), 2)
                 db.commit()
                 return {
                     "success": True,
@@ -636,6 +637,21 @@ class IngestionService:
                 db.commit()
                 reconciled_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
                 new_cash = reconciled_ledger["current_balance"]
+
+            # Recalibrate merchant minimum operating cash floor to match the new scale
+            merchant.minimum_operating_cash = round(max(300.0, new_cash * 0.35), 2)
+
+            # Adapt obligations if they vastly exceed new balance scale
+            active_obs = db.query(Obligation).filter(
+                Obligation.merchant_id == merchant_id,
+                Obligation.status == "UPCOMING"
+            ).all()
+            total_active_obs = sum(o.amount for o in active_obs)
+            if total_active_obs > new_cash * 1.5 or any(o.amount > new_cash for o in active_obs):
+                for o in active_obs:
+                    if o.amount > new_cash * 0.40:
+                        o.amount = round(max(100.0, new_cash * 0.25), 2)
+            db.commit()
         else:
             current_ledger = CashflowService.get_merchant_ledger(db, merchant_id)
             new_cash = current_ledger["current_balance"]

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, UploadCloud, FileText, CheckCircle2, Download, AlertCircle, RefreshCw, Landmark, FileSpreadsheet, ShieldCheck, ArrowDownRight, ArrowUpRight } from 'lucide-react';
-import { uploadStatement } from '../services/api';
+import { uploadStatement, updateMerchantBalance } from '../services/api';
 
 export default function UploadStatementModal({ isOpen, onClose, merchantId, onUploadSuccess }) {
   const [file, setFile] = useState(null);
@@ -83,8 +83,8 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file) {
-      setError('Please choose a bank statement file (PDF, Excel, or CSV) to upload.');
+    if (!file && !customBalance) {
+      setError('Please choose a bank statement file to upload, or enter a cash balance to synchronize.');
       return;
     }
 
@@ -94,13 +94,18 @@ export default function UploadStatementModal({ isOpen, onClose, merchantId, onUp
 
     try {
       const balanceToSync = customBalance ? parseFloat(customBalance) : null;
-      const res = await uploadStatement(merchantId, file, balanceToSync, replaceMode);
+      let res;
+      if (file) {
+        res = await uploadStatement(merchantId, file, balanceToSync, replaceMode);
+      } else if (balanceToSync !== null) {
+        res = await updateMerchantBalance(merchantId, balanceToSync);
+      }
       setResult(res);
       if (onUploadSuccess) {
         onUploadSuccess();
       }
     } catch (err) {
-      setError(err.message || 'Failed to parse statement. Please check file format.');
+      setError(err.message || 'Failed to update financial records. Please verify file format or balance entry.');
     } finally {
       setLoading(false);
     }

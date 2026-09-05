@@ -278,3 +278,20 @@ class ResetPasswordRequest(BaseModel):
     email: str
     new_password: str
 
+
+# --- Direct Balance Update Schemas ---
+class UpdateBalanceRequest(BaseModel):
+    new_balance: float = Field(..., ge=0, description="New cleared bank cash balance in INR")
+
+
+class UpdateBalanceResponse(BaseModel):
+    success: bool
+    merchant_id: str
+    previous_cash: float
+    new_cash: float
+    minimum_operating_cash: float
+    expected_inflows_30d: float
+    expected_outflows_30d: float
+    message: str
+
+

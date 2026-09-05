@@ -19,6 +19,8 @@ from backend.api.schemas import (
     LoginOrRegisterRequest,
     LoginResponse,
     ResetPasswordRequest,
+    UpdateBalanceRequest,
+    UpdateBalanceResponse,
 )
 from backend.core.constants import RiskLevel
 
@@ -259,6 +261,60 @@ def update_obligation(
         "status": ob.status,
         "recurring": ob.recurring,
         "risk_contribution_pct": 100.0,
+    }
+
+
+@router.post("/{merchant_id}/update-balance", response_model=UpdateBalanceResponse)
+def update_merchant_balance(
+    merchant_id: str,
+    request: UpdateBalanceRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Directly updates merchant bank cash balance, auto-recalibrating the dynamic
+    safety reserve buffer and working capital forecasting horizon.
+    """
+    merchant = db.query(Merchant).filter(Merchant.merchant_id == merchant_id).first()
+    if not merchant:
+        raise HTTPException(status_code=404, detail=f"Merchant {merchant_id} not found.")
+
+    target_bal = round(float(request.new_balance), 2)
+    if target_bal < 0:
+        raise HTTPException(status_code=400, detail="Bank balance cannot be negative.")
+
+    # 1. Adjust starting balance to reconcile ledger
+    ledger = CashflowService.get_merchant_ledger(db, merchant_id)
+    current_cash = ledger["current_balance"]
+    delta = target_bal - current_cash
+    merchant.starting_balance = round(float(merchant.starting_balance) + delta, 2)
+
+    # 2. Recalibrate minimum operating cash floor to match scale
+    merchant.minimum_operating_cash = round(max(300.0, target_bal * 0.35), 2)
+
+    # 3. Adapt obligations if they vastly exceed target balance
+    obs = db.query(Obligation).filter(
+        Obligation.merchant_id == merchant_id,
+        Obligation.status == "UPCOMING"
+    ).all()
+    total_ob = sum(o.amount for o in obs)
+    if total_ob > target_bal * 1.5 or any(o.amount > target_bal for o in obs):
+        for o in obs:
+            if o.amount > target_bal * 0.40:
+                o.amount = round(max(100.0, target_bal * 0.25), 2)
+
+    db.commit()
+
+    # 4. Generate updated summary
+    updated_summary = get_merchant_summary(merchant_id, db)
+    return {
+        "success": True,
+        "merchant_id": merchant_id,
+        "previous_cash": current_cash,
+        "new_cash": target_bal,
+        "minimum_operating_cash": updated_summary["minimum_operating_cash"],
+        "expected_inflows_30d": updated_summary["expected_inflows_30d"],
+        "expected_outflows_30d": updated_summary["expected_outflows_30d"],
+        "message": f"Successfully updated live cash to ₹{target_bal:,.2f}. Safety buffer recalibrated to ₹{updated_summary['minimum_operating_cash']:,.2f}."
     }
 
 

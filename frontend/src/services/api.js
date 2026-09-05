@@ -178,3 +178,19 @@ export async function resetPassword(email, newPassword) {
   return res.json();
 }
 
+export async function updateMerchantBalance(merchantId, newBalance) {
+  const res = await fetch(`${BASE_URL}/merchants/${merchantId}/update-balance`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      new_balance: parseFloat(newBalance),
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Balance update failed');
+  }
+  return res.json();
+}
+
+

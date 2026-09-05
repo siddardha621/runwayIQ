@@ -101,6 +101,15 @@ class CashflowForecaster:
             feat_out = feat_out[X_out.columns]
             pred_outflow = max(0.0, float(self.outflow_model.predict(feat_out)[0]))
 
+            # If recorded inflows/outflows are sparse relative to active capital balance, establish capital-consistent velocity
+            if current_balance > 500.0:
+                total_hist_in = float(history_df["inflows"].sum()) if not history_df.empty else 0.0
+                if total_hist_in < (current_balance * 0.15):
+                    pred_inflow = max(pred_inflow, round(current_balance * 0.035, 2))
+                total_hist_out = float(history_df["outflows"].sum()) if not history_df.empty else 0.0
+                if total_hist_out < (current_balance * 0.15):
+                    pred_outflow = max(pred_outflow, round(current_balance * 0.025, 2))
+
             # Update rolling history for next step
             inflow_history.append(pred_inflow)
             outflow_history.append(pred_outflow)
@@ -169,6 +178,10 @@ class CashflowForecaster:
             recent_out = history_df["outflows"].tail(7).values
             mean_in = float(np.mean(recent_in)) if len(recent_in) > 0 else 50000.0
             mean_out = float(np.mean(recent_out)) if len(recent_out) > 0 else 30000.0
+            if current_balance > 500.0 and mean_in < (current_balance * 0.01):
+                mean_in = round(current_balance * 0.035, 2)
+            if current_balance > 500.0 and mean_out < (current_balance * 0.01):
+                mean_out = round(current_balance * 0.025, 2)
             std_in = float(np.std(recent_in)) if len(recent_in) > 1 else mean_in * 0.3
             std_out = float(np.std(recent_out)) if len(recent_out) > 1 else mean_out * 0.3
 
