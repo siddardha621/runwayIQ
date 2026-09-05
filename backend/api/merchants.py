@@ -329,6 +329,8 @@ def login_or_register_merchant(request: LoginOrRegisterRequest, db: Session = De
     from backend.models.auth import UserAuth, hash_password
 
     normalized_email = request.email.strip().lower()
+    if "@" not in normalized_email:
+        normalized_email = f"{normalized_email}@gmail.com"
     email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
     if not re.match(email_regex, normalized_email):
         raise HTTPException(status_code=422, detail="Invalid email format. Please provide a valid email address.")
@@ -426,6 +428,8 @@ def reset_merchant_password(request: ResetPasswordRequest, db: Session = Depends
     """Resets password for any registered email."""
     from backend.models.auth import UserAuth, hash_password
     normalized_email = request.email.strip().lower()
+    if "@" not in normalized_email:
+        normalized_email = f"{normalized_email}@gmail.com"
     auth_entry = db.query(UserAuth).filter(UserAuth.email == normalized_email).first()
     if not auth_entry:
         raise HTTPException(status_code=404, detail=f"No account found for '{normalized_email}'.")

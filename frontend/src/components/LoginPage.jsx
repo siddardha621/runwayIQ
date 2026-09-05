@@ -81,6 +81,16 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
       description: '9-day old account without enough transaction history. Demonstrates automated decision abstention to protect merchants.',
       email: 'accounts@apexlogistics.in',
     },
+    {
+      merchant_id: 'merch_siddardhavarma621',
+      business_name: "Siddardha's Live Store",
+      business_type: 'Retail & E-commerce',
+      balance_str: '₹2,000',
+      tag: 'Personal Account',
+      tagColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      description: 'Personal merchant account with live SQLite sync. Password: admin123',
+      email: 'siddardhavarma621@gmail.com',
+    },
   ];
 
   // Retrieve custom saved passwords from localStorage or default to 'admin123'
@@ -109,10 +119,13 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
     setAuthError(null);
     setSuccessMsg(null);
 
-    const normalizedEmail = email.trim().toLowerCase();
+    let normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail.includes('@')) {
+      normalizedEmail = `${normalizedEmail}@gmail.com`;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(normalizedEmail)) {
-      setAuthError('Please enter a valid email address (e.g. yourname@gmail.com).');
+      setAuthError('Please enter a valid email address (e.g. yourname@gmail.com or username).');
       return;
     }
 
@@ -153,10 +166,13 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
   const handleRequestCode = (e) => {
     e.preventDefault();
     setForgotError(null);
-    const normalized = forgotEmail.trim().toLowerCase();
+    let normalized = forgotEmail.trim().toLowerCase();
+    if (!normalized.includes('@')) {
+      normalized = `${normalized}@gmail.com`;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(normalized)) {
-      setForgotError('Please enter a valid email address (e.g. yourname@gmail.com).');
+      setForgotError('Please enter a valid email address (e.g. yourname@gmail.com or username).');
       return;
     }
     // Generate simulated 6-digit OTP
@@ -345,7 +361,7 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                   <div className="relative">
                     <Mail className="w-4.5 h-4.5 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                     <input
-                      type="email"
+                      type="text"
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);
@@ -493,7 +509,7 @@ export default function LoginPage({ onLoginSuccess, merchants = [] }) {
                       Store Email
                     </label>
                     <input
-                      type="email"
+                      type="text"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       required
